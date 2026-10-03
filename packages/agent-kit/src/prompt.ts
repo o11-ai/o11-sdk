@@ -1,0 +1,24 @@
+export const agentKitVersion = '0.1.3';
+export type SetupRequest = { apiUrl: string; organizationId: string; routineId?: string; revision?: number; request: string; trackingOnly?: boolean };
+export function setupPrompt(input: SetupRequest): string {
+  const endpoint = new URL('/api/mcp', input.apiUrl).href;
+  return `${input.trackingOnly ? 'Configure only the missing o11 tracking in this application repository. Do not create, edit or activate a routine.' : 'Configure my o11 routine in the workspace below and add missing tracking in this application repository.'}
+
+Workspace: ${input.organizationId}
+${input.routineId ? `Routine: ${input.routineId}${input.revision !== undefined ? `\nCopied revision: ${input.revision}` : ''}` : input.trackingOnly ? 'Use this workspace’s existing sources.' : 'Create an inactive routine and reuse its returned ID.'}
+MCP: ${endpoint}
+Setup guide: ${new URL('/api/agent-docs/setup', input.apiUrl).href}
+CLI and SDK version: ${agentKitVersion}
+
+Before configuring anything, review my request and the available documentation and sources. If my instructions are unclear or you need more information, ask me concise questions before making the affected changes. Do not guess missing requirements; continue only work that does not depend on my answers.
+
+1. Prefer an available o11 MCP connection. Call o11_setup and verify the workspace. If your client cannot use MCP, use the published @o11/cli@${agentKitVersion}: o11 login --server ${endpoint}, then o11 tools list and o11 call TOOL --input FILE. CLI output is JSON. o11 mcp is also available as a local MCP server. Ask me to complete browser sign-in and provider consent when needed. Never print or commit credentials.
+2. Read o11_docs for setup, routines, signals, tracking and the relevant source. Discover current capabilities and exact tool input schemas. Fetch the latest routine before editing; preserve my original request and unrelated edits. Inspect descriptionDocument for the IDs of sources mentioned in my request; resolve them against signals_sources. Read existing source schemas and bounded samples. Reuse existing PostHog/database data before adding SDK tracking. Product database access must remain read-only.
+3. ${input.trackingOnly ? 'Discover and register only the missing source events for the behavior below. Do not create or modify routine settings.' : 'Configure the entire routine: detection, identity, timing, persona/sender, allowed channels and tools, messages, follow-ups and stopping conditions. Edit the structured definitions directly; do not invoke another configuration agent.'} Unsupported requirements must be reported explicitly, never approximated silently.
+4. If tracking is missing, register its event definition, install @o11/tracking@${agentKitVersion}, and instrument real successful operations in this repository. Follow the SDK documentation for stable event IDs, customer identity, server secrets and retries. Use only the source-scoped credential authorized for this installation. With CLI credential calls, use --output-file to save the result privately instead of printing secrets. Run this repository's checks. Keep secrets out of browser bundles, messages and source control.
+5. ${input.trackingOnly ? 'Verify the source configuration and report the received and missing events.' : 'Validate the full saved routine and preview its matches without contacting customers. Save an inactive draft and return its dashboard link and a concise summary.'} Verify received tracking through o11; code changes alone do not prove deployment. Report waiting dependencies honestly. Activate or deploy only if I explicitly authorize that action.
+6. Reuse the same routine ID, revisions and mutation operation IDs. After a timeout, inspect operation status and saved state before retrying, including when switching from MCP to CLI. A permission or validation error is not a reason to bypass checks.
+
+${input.trackingOnly ? 'Behavior to instrument:' : 'My exact routine request (preserve this as the routine description):'}
+${input.request}`;
+}

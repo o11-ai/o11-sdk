@@ -1,0 +1,9 @@
+node_modules
+dist/
+.env*
+.dev.vars*
+*.pem
+*.key
+*.tsbuildinfo
+output/
+outputs/

@@ -1,0 +1,28 @@
+{
+  "name": "o11-sdk",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "license": "MIT",
+  "packageManager": "bun@1.4.2",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/o11-ai/o11-sdk.git"
+  },
+  "homepage": "https://docs.o11.ai",
+  "scripts": {
+    "build": "bun run --filter @o11/cli build && bun run --filter @o11/tracking build",
+    "test": "bun test packages",
+    "check-types": "bun run --filter \"@o11/*\" check-types",
+    "docs:sync": "bun scripts/sync-docs.ts",
+    "docs:check": "bun scripts/sync-docs.ts --check"
+  },
+  "devDependencies": {
+    "@typescript/native-preview": "7.0.0-dev.20260707.2"
+  }
+}
