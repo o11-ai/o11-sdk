@@ -1,6 +1,6 @@
 # o11 CLI
 
-Configure the entire o11 workspace through the same authorized tools as remote MCP. Start with `o11 login --server https://YOUR_API/api/mcp`, then `o11 status`, `o11 tools list` and `o11 docs setup`.
+Configure the entire o11 workspace through the same authorized tools as remote MCP. Start with `o11 login --server https://api-v2.o11.ai/api/mcp`, then `o11 status`, `o11 tools list` and `o11 docs setup`.
 
 `o11 tools describe TOOL` returns the exact current input schema. `o11 call TOOL --input request.json` executes it and returns JSON. Use `--input -` for standard input. Every mutation requires a stable UUID `_operationId`; after a timeout inspect `o11_operation_status` and saved state before retrying. Use `--output-file FILE` to write credential-bearing results to a new private file without printing them.
 

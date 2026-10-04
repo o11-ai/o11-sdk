@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import { setupPrompt } from '../src/prompt';
+import { agentKitVersion, cliVersion } from '../src/prompt';
 import { agentDocs, searchDocs, readDoc } from '../src/docs';
 test('handoff preserves the exact request, revision and workspace with one MCP/CLI workflow', () => {
   const request = 'Find report creators.\nEmail once; stop on reply.';
@@ -26,4 +27,19 @@ test('routine and tracking handoffs ask for clarification without guessing requi
     expect(prompt).toContain('continue only work that does not depend on my answers');
     expect(prompt.endsWith(request)).toBe(true);
   }
+});
+test('handoff and guides support independently published CLI and tracking versions', () => {
+  const prompt = setupPrompt({ apiUrl: 'https://api.example.test', organizationId: 'workspace-1', request: 'Configure tracking.' });
+  expect(prompt).toContain(`CLI version: ${cliVersion}`);
+  expect(prompt).toContain(`Tracking SDK version: ${agentKitVersion}`);
+  expect(prompt).toContain(`@o11/cli@${cliVersion}`);
+  expect(prompt).toContain(`@o11/tracking@${agentKitVersion}`);
+  expect(readDoc('setup')?.markdown).toContain(`@o11/cli@${cliVersion}`);
+  expect(readDoc('cli')?.markdown).toContain(`@o11/cli@${cliVersion}`);
+  expect(readDoc('tracking')?.markdown).toContain(`@o11/tracking@${agentKitVersion}`);
+});
+test('installation handoff is source specific and preserves repository approval boundaries', () => {
+  const prompt=setupPrompt({apiUrl:'https://example.test',organizationId:'org',trackingOnly:true,trackingSourceId:'source-1',request:'Instrument actual successful orders.'});
+  for (const required of ['AGENTS.md','Tracking source: source-1','Tracking endpoint: https://example.test/api/tracking/events','environment=test','durable application outbox','recorded channel/purpose permissions','continuous coverage','repository approval']) expect(prompt).toContain(required);
+  expect(prompt).toContain('Do not create, edit or activate a routine');
 });
