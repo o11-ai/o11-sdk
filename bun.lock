@@ -5,6 +5,7 @@
     "": {
       "name": "o11-sdk",
       "devDependencies": {
+        "@types/bun": "1.4.2",
         "@typescript/native-preview": "7.0.0-dev.20260707.2",
       },
     },
@@ -35,7 +36,7 @@
     },
     "packages/tracking": {
       "name": "@o11/tracking",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "devDependencies": {
         "@types/bun": "1.4.2",
       },

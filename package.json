@@ -24,6 +24,7 @@
     "check-types:release": "bun scripts/typecheck.mjs tsconfig.release.json"
   },
   "devDependencies": {
-    "@typescript/native-preview": "7.0.0-dev.20260707.2"
+    "@typescript/native-preview": "7.0.0-dev.20260707.2",
+    "@types/bun": "1.4.2"
   }
 }
