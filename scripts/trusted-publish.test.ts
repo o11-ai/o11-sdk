@@ -99,6 +99,7 @@ test('actual Bun publish uses in-memory token and the prebuilt payload against l
   const { tmpdir } = await import('node:os');
   const { join } = await import('node:path');
   const temp = await mkdtemp(join(tmpdir(), 'o11-bun-publish-contract-'));
+  const publishDirectory = await mkdtemp(join(tmpdir(), 'o11-isolated-publisher-'));
   const credential = 'synthetic-local-publish-token';
   let authorizationMatched = false;
   let payloadName: unknown;
@@ -124,15 +125,25 @@ test('actual Bun publish uses in-memory token and the prebuilt payload against l
     const tarball = join(temp, 'contract.tgz');
     const pack = Bun.spawn([process.execPath, 'pm', 'pack', '--ignore-scripts', '--filename', tarball], { cwd: temp, stdout: 'ignore', stderr: 'ignore' });
     expect(await pack.exited).toBe(0);
-    const publish = Bun.spawn([process.execPath, 'publish', tarball, '--registry', server.url.href, '--access', 'public'], {
-      cwd: temp, env: publisherEnvironment(process.env, credential, temp), stdin: 'ignore', stdout: 'ignore', stderr: 'ignore',
+    const missingManifest = Bun.spawn([process.execPath, 'publish', tarball, '--ignore-scripts', '--registry', server.url.href, '--access', 'public'], {
+      cwd: publishDirectory, env: publisherEnvironment(process.env, credential, publishDirectory), stdin: 'ignore', stdout: 'ignore', stderr: 'ignore',
+    });
+    expect(await missingManifest.exited).not.toBe(0);
+    expect(putCount).toBe(0);
+    await Bun.write(join(publishDirectory, 'package.json'), JSON.stringify({ name: 'o11-synthetic-publish-contract', version: '0.0.0' }));
+    const publish = Bun.spawn([process.execPath, 'publish', tarball, '--ignore-scripts', '--registry', server.url.href, '--access', 'public'], {
+      cwd: publishDirectory, env: publisherEnvironment(process.env, credential, publishDirectory), stdin: 'ignore', stdout: 'ignore', stderr: 'ignore',
     });
     expect(await publish.exited).toBe(0);
     expect(authorizationMatched).toBeTrue();
     expect(payloadName).toBe('o11-synthetic-publish-contract');
     expect(putCount).toBe(1);
     expect(attachment).toBe(Buffer.from(await Bun.file(tarball).arrayBuffer()).toString('base64'));
-  } finally { server.stop(true); await rm(temp, { recursive: true, force: true }); }
+  } finally {
+    server.stop(true);
+    await rm(temp, { recursive: true, force: true });
+    await rm(publishDirectory, { recursive: true, force: true });
+  }
 });
 
 

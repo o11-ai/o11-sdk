@@ -153,7 +153,10 @@ async function main() {
     console.log('Release stage: registry continuity.');
     await unchangedRegistry(fetch, scope.name, scope.version, initial);
     console.log('Release stage: publish.');
-    await command([process.execPath, 'publish', tarball, '--access', 'public', '--tag', 'latest', '--registry', registry],
+    // Bun requires a working-directory manifest even when publishing a tarball.
+    // Keep it minimal so no package lifecycle scripts receive the credential.
+    await Bun.write(resolve(temporary, 'package.json'), JSON.stringify({ name: scope.name, version: scope.version }));
+    await command([process.execPath, 'publish', tarball, '--ignore-scripts', '--access', 'public', '--tag', 'latest', '--registry', registry],
       temporary, publisherEnvironment(process.env, token, temporary));
     console.log('Release stage: registry confirmation.');
     let confirmed = false;
