@@ -15,7 +15,7 @@ describe('server tracking contract', () => {
     const send = (async (_url: URL | RequestInfo, init?: RequestInit) => { requests.push(init!); return Response.json({accepted:true,receiptId:"00000000-0000-4000-8000-000000000001"}, {status:202}); }) as typeof fetch;
     const result = await createTrackingClient({ environment: "test", endpoint: 'https://example.com/events', key: 'source-secret', fetch: send }).track(event);
     expect(result).toEqual({ accepted: true, retryable: false, status: 202, receiptId: "00000000-0000-4000-8000-000000000001" });
-    expect(requests[0].redirect).toBe('error');
+    expect(requests[0].redirect).toBe('manual');
     expect(JSON.parse(String(requests[0].body))).toEqual(event);
   });
   test('does not retry authorization or schema failures', async () => {
@@ -39,6 +39,21 @@ test('long rate limit holds are returned to the durable outbox without sleeping'
   const result = await createTrackingClient({environment: 'test', endpoint:'https://example.test/api/tracking/events',key:'secret',fetch:send}).track(event);
   expect(result).toMatchObject({accepted:false,retryable:true,status:429,code:'rate_limited',retryAfterMs:60000});
   expect(calls).toBe(1);
+});
+test('Worker-compatible transport refuses redirected writes and receipt reads without retrying', async () => {
+  const id = crypto.randomUUID();
+  for (const status of [301, 302, 303, 307, 308]) {
+    let calls = 0;
+    const client = createTrackingClient({ environment: 'test', endpoint: 'https://example.test/api/tracking/events', key: 'secret', fetch: async (_url, init) => {
+      calls++;
+      if (init?.redirect === 'error') throw new TypeError('Unsupported Worker redirect mode');
+      expect(init?.redirect).toBe('manual');
+      return new Response(null, { status, headers: { Location: 'https://attacker.test/collect' } });
+    } });
+    expect(await client.track(event)).toEqual({ accepted: false, retryable: false, status, code: 'redirect_rejected' });
+    expect(await client.receipt(id)).toBeNull();
+    expect(calls).toBe(2);
+  }
 });
 test('profiles and receipt inspection retain source authentication and isolated environment', async () => {
   const id = crypto.randomUUID(), paths: string[] = [];

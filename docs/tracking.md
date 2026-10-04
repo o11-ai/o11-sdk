@@ -1,6 +1,6 @@
 # Tracking SDK
 
-Install @o11/tracking@0.2.0 in the customer's JavaScript/TypeScript server application. The package exports createTrackingClient. No o11 GitHub connection is needed. Prefer existing PostHog events or read-only database records when they already prove the behavior.
+Install @o11/tracking@0.2.1 in the customer's JavaScript/TypeScript server application. The package exports createTrackingClient. No o11 GitHub connection is needed. Prefer existing PostHog events or read-only database records when they already prove the behavior.
 
 Use signals_tracking_register with a stable source ID, name and manifest. A manifest has version: 1 and events with name, description and fields. Each field has name, type (string, number or boolean) and required. Discover the exact schema through the tool catalog. Updates require expectedUpdatedAt from status. Registration preserves omitted events and rejects field removal, type/required changes or new required fields on an existing event. Add optional fields or use a new event name for a breaking change.
 

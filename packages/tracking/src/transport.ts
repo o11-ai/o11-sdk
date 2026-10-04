@@ -43,8 +43,12 @@ export function trackingTransport(options: TrackingOptions) {
       let status: number | undefined, delay: number | undefined;
       for (let attempt = 0; attempt < attempts; attempt++) {
         try {
-          const response = await send(url(kind), { method: 'POST', headers, body, signal: AbortSignal.timeout(timeoutMs), redirect: 'error' });
+          const response = await send(url(kind), { method: 'POST', headers, body, signal: AbortSignal.timeout(timeoutMs), redirect: 'manual' });
           status = response.status; delay = retryAfterMs(response.headers.get('Retry-After'));
+          if (status >= 300 && status < 400) {
+            await response.body?.cancel();
+            return { accepted: false, retryable: false, status, code: 'redirect_rejected' };
+          }
           const data = await boundedJson(response);
           if (response.ok) return data?.accepted === true && typeof data.receiptId === 'string' ? { accepted: true, retryable: false, status, receiptId: data.receiptId } : { accepted: false, retryable: true, status, code: 'invalid_response' };
           const code = typeof data?.code === 'string' ? data.code : 'request_rejected';
@@ -58,7 +62,8 @@ export function trackingTransport(options: TrackingOptions) {
     },
     async receipt(id: string): Promise<ReceiptStatus | null> {
       if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Use the receipt ID returned by o11.');
-      const response = await send(url(`receipts/${id}`), { method: 'GET', headers, signal: AbortSignal.timeout(timeoutMs), redirect: 'error' });
+      const response = await send(url(`receipts/${id}`), { method: 'GET', headers, signal: AbortSignal.timeout(timeoutMs), redirect: 'manual' });
+      if (response.status >= 300 && response.status < 400) { await response.body?.cancel(); return null; }
       const data = await boundedJson(response);
       if (!response.ok || !data || data.id !== id || !['queued', 'processed', 'rejected'].includes(String(data.status))) return null;
       return { id, kind: String(data.kind), status: data.status as ReceiptStatus['status'], code: typeof data.code === 'string' ? data.code : null, processedAt: typeof data.processedAt === 'string' ? data.processedAt : null };
