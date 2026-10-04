@@ -113,9 +113,16 @@ export async function exchangeCredential(request: Request, env: Environment, nam
   const result = object(await response.json());
   const created = Date.parse(String(result.created));
   const expires = Date.parse(String(result.expires));
-  if (result.token_type !== 'oidc' || typeof result.token !== 'string' || !result.token
-    || /[\r\n]/.test(result.token) || !Number.isFinite(created) || !Number.isFinite(expires)
-    || created > now + 30_000 || expires <= now + 60_000 || expires - created > 3_600_000) throw new PublishError('OIDC credential response contract refused.');
+  const contract = {
+    type: result.token_type === 'oidc',
+    credential: typeof result.token === 'string' && !!result.token && !/[\r\n]/.test(result.token),
+    created: Number.isFinite(created) && created <= now + 30_000,
+    expires: Number.isFinite(expires) && expires > now + 60_000,
+    lifetime: Number.isFinite(expires - created) && expires - created <= 3_600_000,
+  };
+  const failed = Object.entries(contract).filter(([, valid]) => !valid).map(([label]) => label);
+  if (failed.length) throw new PublishError(`OIDC credential response contract refused: ${failed.join(', ')}. Lifetime seconds: ${Number.isFinite(expires - created) ? Math.round((expires - created) / 1000) : 'unavailable'}.`);
+  if (typeof result.token !== 'string') refuse();
   return result.token;
 }
 export function publisherEnvironment(env: Environment, token: string, home: string) {
