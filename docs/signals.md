@@ -10,6 +10,7 @@ New SDK receipts and synced PostHog events wake only routines subscribed to thos
 - “Created a report on Monday, exported it in a different session by Sunday”: scope customer, windowSeconds 604800. Session IDs may differ; customer identity must be verified.
 - “Created a report on web, exported that report twice on desktop”: each step selects its source; the export step has minimumOccurrences 2; correlationProperty is the shared report ID. Explicitly link the web and desktop identities first.
 - “Created three different reports”: one counted event with minimumOccurrences 3 and distinctProperty set to the report ID. Repeated delivery of an event never increases counts.
+- “Pricing → Export → Home three times”: nine ordered steps with unique IDs, minimumOccurrences 1 and one occurrence per step. Two cycles cannot match. A fixed expansion must fit the 12-step limit; general recurrence counting and larger expansions are unsupported. Counts on individual conditions do not count complete cycles.
 
 Use signals_identities_find to resolve native IDs, signals_identities_group to inspect them, and signals_identities_link only after the application verifies that they are the same person. Names, email similarity and matching external IDs alone are insufficient. Links preserve source records and do not copy contact addresses or permission. signals_identities_unlink reverses a mistaken link. Pending matches are invalidated when their identity group changes.
 
@@ -34,5 +35,7 @@ Checks run at the saved daily time in its timezone. Results use keyset pages of 
 ## Delivery and recovery
 
 A confirmed match and its queued enrollment save in one transaction. Before enrollment and again before delivery, the worker checks the active release, version, identity group, source access, consent, sender, ownership and stopping conditions. Existing contact cooldowns still apply even when different routines match. Duplicate event receipts, queue retries and repeated model checks do not send duplicate messages. Temporary ownership or timing holds wait for retry; uncertain provider delivery requires reconciliation before another send.
+
+Routine cooldowns are limited to 365 days. They cannot express a lifetime once-per-customer rule; report that requirement explicitly rather than substituting a cooldown.
 
 Production work uses Cloudflare Queues and durable PostgreSQL outbox records. Expired worker leases and lost signal queue messages recover; failures remain retryable. Local Bun uses the same handlers. API readiness reports missing workers/connections; repository changes are not evidence of production deployment.
