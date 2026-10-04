@@ -51,23 +51,22 @@ test('errors fail closed without credential or response-body disclosure', async 
     await expect(exchangeCredential(async () => { called = true; return json({}); }, { ...env, ACTIONS_ID_TOKEN_REQUEST_URL: url }, '@o11/tracking', now)).rejects.toThrow();
     expect(called).toBeFalse();
   }
-  for (const result of [{ token_type: 'access', token: secret }, { token_type: 'oidc', token: secret, created: new Date(now).toISOString(), expires: new Date(now - 1).toISOString() }]) {
+  for (const result of [{ token_type: 'access', token: secret }, { token_type: 'oidc', token: '' }, { token_type: 'oidc', token: 'invalid\ncredential' }]) {
     let calls = 0;
     await expect(exchangeCredential(async () => ++calls === 1 ? json({ value: jwt() }) : json(result, 201), env, '@o11/cli', now)).rejects.toThrow();
   }
 });
 
-test('exchange accepts absent date metadata used by npm itself, but rejects malformed supplied dates', async () => {
+test('opaque exchange credentials match npm behavior regardless of optional date representation', async () => {
   const results = [
     { token_type: 'oidc', token: 'synthetic-exchange-token' },
-    { token_type: 'oidc', token: 'synthetic-exchange-token', created: 'invalid' },
-    { token_type: 'oidc', token: 'synthetic-exchange-token', expires: new Date(now + 3_600_000).toISOString() },
+    { token_type: 'oidc', token: 'synthetic-exchange-token', created: null, expires: null },
+    { token_type: 'oidc', token: 'synthetic-exchange-token', created: now, expires: now + 3_600_000 },
   ];
-  for (const [index, result] of results.entries()) {
+  for (const result of results) {
     let calls = 0;
     const promise = exchangeCredential(async () => ++calls === 1 ? json({ value: jwt() }) : json(result, 201), env, '@o11/tracking', now);
-    if (index === 0) await expect(promise).resolves.toBe('synthetic-exchange-token');
-    else await expect(promise).rejects.toThrow();
+    await expect(promise).resolves.toBe('synthetic-exchange-token');
   }
 });
 
