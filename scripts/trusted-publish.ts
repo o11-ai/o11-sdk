@@ -7,6 +7,9 @@ import { assertPublicText } from './public-artifacts';
 
 const registry = 'https://registry.npmjs.org';
 const repository = 'o11-ai/o11-sdk';
+const repositoryId = '1403717429';
+const ownerId = '240864808';
+const subject = `repo:o11-ai@${ownerId}/o11-sdk@${repositoryId}:environment:npm-publish`;
 const workflow = `${repository}/.github/workflows/npm-publish.yml@refs/heads/main`;
 const audience = 'npm:registry.npmjs.org';
 const packages = {
@@ -36,12 +39,21 @@ export function verifyIdentity(token: string, env: Environment, now: number) {
   try { claims = object(JSON.parse(Buffer.from(token.split('.')[1] ?? '', 'base64url').toString())); }
   catch { refuse(); }
   // npm verifies the signature. These checks reject accidental workflow scope drift before exchange.
-  if (claims.iss !== 'https://token.actions.githubusercontent.com' || claims.aud !== audience
-    || claims.repository !== repository || claims.ref !== 'refs/heads/main'
-    || claims.workflow_ref !== workflow || claims.sha !== env.GITHUB_SHA
-    || claims.sub !== `repo:${repository}:environment:npm-publish`
-    || claims.runner_environment !== 'github-hosted'
-    || typeof claims.exp !== 'number' || claims.exp * 1000 <= now + 30_000) refuse();
+  const checks = {
+    issuer: claims.iss === 'https://token.actions.githubusercontent.com',
+    audience: claims.aud === audience,
+    repository: claims.repository === repository,
+    repositoryId: claims.repository_id === repositoryId,
+    ownerId: claims.repository_owner_id === ownerId,
+    branch: claims.ref === 'refs/heads/main',
+    workflow: claims.workflow_ref === workflow,
+    commit: claims.sha === env.GITHUB_SHA,
+    environment: claims.sub === subject && claims.environment === 'npm-publish',
+    runner: claims.runner_environment === 'github-hosted',
+    expiry: typeof claims.exp === 'number' && claims.exp * 1000 > now + 30_000,
+  };
+  const failed = Object.entries(checks).filter(([, valid]) => !valid).map(([label]) => label);
+  if (failed.length) throw new PublishError(`OIDC identity mismatch: ${failed.join(', ')}.`);
 }
 export function inspectTarball(bytes: Uint8Array, name: string, version: string) {
   if (!Object.hasOwn(packages, name)) refuse();
@@ -85,7 +97,7 @@ export async function exchangeCredential(request: Request, env: Environment, nam
   const requestUrl = new URL(env.ACTIONS_ID_TOKEN_REQUEST_URL ?? 'https://invalid.invalid');
   if (requestUrl.protocol !== 'https:' || requestUrl.username || requestUrl.password
     || !requestUrl.hostname.endsWith('.actions.githubusercontent.com')
-    || !env.ACTIONS_ID_TOKEN_REQUEST_TOKEN) refuse();
+    || !env.ACTIONS_ID_TOKEN_REQUEST_TOKEN) throw new PublishError('OIDC request configuration refused.');
   requestUrl.searchParams.set('audience', audience);
   const identity = await jsonResponse(request, requestUrl.href, {
     headers: { Authorization: `Bearer ${env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}` },
@@ -103,7 +115,7 @@ export async function exchangeCredential(request: Request, env: Environment, nam
   const expires = Date.parse(String(result.expires));
   if (result.token_type !== 'oidc' || typeof result.token !== 'string' || !result.token
     || /[\r\n]/.test(result.token) || !Number.isFinite(created) || !Number.isFinite(expires)
-    || created > now + 30_000 || expires <= now + 60_000 || expires - created > 3_600_000) refuse();
+    || created > now + 30_000 || expires <= now + 60_000 || expires - created > 3_600_000) throw new PublishError('OIDC credential response contract refused.');
   return result.token;
 }
 export function publisherEnvironment(env: Environment, token: string, home: string) {
