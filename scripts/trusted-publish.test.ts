@@ -57,6 +57,20 @@ test('errors fail closed without credential or response-body disclosure', async 
   }
 });
 
+test('exchange accepts absent date metadata used by npm itself, but rejects malformed supplied dates', async () => {
+  const results = [
+    { token_type: 'oidc', token: 'synthetic-exchange-token' },
+    { token_type: 'oidc', token: 'synthetic-exchange-token', created: 'invalid' },
+    { token_type: 'oidc', token: 'synthetic-exchange-token', expires: new Date(now + 3_600_000).toISOString() },
+  ];
+  for (const [index, result] of results.entries()) {
+    let calls = 0;
+    const promise = exchangeCredential(async () => ++calls === 1 ? json({ value: jwt() }) : json(result, 201), env, '@o11/tracking', now);
+    if (index === 0) await expect(promise).resolves.toBe('synthetic-exchange-token');
+    else await expect(promise).rejects.toThrow();
+  }
+});
+
 test('registry lookup refuses existing versions, wrong package identity and server failures', async () => {
   expect(await registrySnapshot(async () => json({ name: '@o11/tracking', versions: { '0.2.0': {} } }), '@o11/tracking', '0.2.1')).toContain('0.2.0');
   await expect(registrySnapshot(async () => json({ name: '@o11/tracking', versions: { '0.2.1': {} } }), '@o11/tracking', '0.2.1')).rejects.toThrow();

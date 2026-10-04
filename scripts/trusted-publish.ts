@@ -111,14 +111,17 @@ export async function exchangeCredential(request: Request, env: Environment, nam
   });
   if (response.status !== 201) throw new PublishError(`OIDC exchange HTTP ${response.status}.`);
   const result = object(await response.json());
+  // npm's own publisher consumes the token without requiring optional date metadata.
+  // The authenticated package-scoped exchange enforces expiration on the registry.
+  const hasLifetime = Object.hasOwn(result, 'created') || Object.hasOwn(result, 'expires');
   const created = Date.parse(String(result.created));
   const expires = Date.parse(String(result.expires));
   const contract = {
     type: result.token_type === 'oidc',
     credential: typeof result.token === 'string' && !!result.token && !/[\r\n]/.test(result.token),
-    created: Number.isFinite(created) && created <= now + 30_000,
-    expires: Number.isFinite(expires) && expires > now + 60_000,
-    lifetime: Number.isFinite(expires - created) && expires - created <= 3_600_000,
+    created: !hasLifetime || Number.isFinite(created) && created <= now + 30_000,
+    expires: !hasLifetime || Number.isFinite(expires) && expires > now + 60_000,
+    lifetime: !hasLifetime || Number.isFinite(expires - created) && expires - created <= 3_600_000,
   };
   const failed = Object.entries(contract).filter(([, valid]) => !valid).map(([label]) => label);
   if (failed.length) throw new PublishError(`OIDC credential response contract refused: ${failed.join(', ')}. Lifetime seconds: ${Number.isFinite(expires - created) ? Math.round((expires - created) / 1000) : 'unavailable'}.`);
