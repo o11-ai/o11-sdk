@@ -1,5 +1,5 @@
 {
-  "name": "@o11/tracking", "version": "0.2.0", "type": "module",
+  "name": "@o11/tracking", "version": "0.2.1", "type": "module",
   "repository": { "type": "git", "url": "git+https://github.com/o11-ai/o11-sdk.git", "directory": "packages/tracking" },
   "homepage": "https://docs.o11.ai/tracking/",
   "bugs": { "url": "https://github.com/o11-ai/o11-sdk/issues" },

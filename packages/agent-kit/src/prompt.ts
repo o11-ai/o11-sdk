@@ -1,4 +1,4 @@
-export const agentKitVersion = '0.2.0';
+export const agentKitVersion = '0.2.1';
 export const cliVersion = '0.1.3';
 export type SetupRequest = { apiUrl: string; organizationId: string; routineId?: string; revision?: number; request: string; trackingOnly?: boolean; trackingSourceId?: string };
 export function setupPrompt(input: SetupRequest): string {
