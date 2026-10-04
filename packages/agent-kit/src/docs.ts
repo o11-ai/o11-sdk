@@ -68,6 +68,8 @@ Within a source, stable customer identity links sessions. Across sources, identi
 
 Install @o11/cli@${cliVersion}. Run **o11 login --server https://YOUR_API/api/mcp** once, then **o11 status**. Use --profile NAME to keep workspace credentials separate. Login supports browser OAuth with PKCE; tokens are stored in the OS credential store. Use O11_TOKEN only for an explicitly supplied scoped key in environments without a credential store. Never put tokens in command arguments.
 
+**o11 docs** is the CLI's bundled documentation snapshot. After connecting, read the current server documentation with **o11 call o11_docs --input FILE**, where FILE contains \`{"page":"tracking"}\` (or another returned page ID). Use the server's SDK version and tool schemas when its documentation is newer than the installed CLI.
+
 - o11 tools list [--search TEXT] — list every authorized operation.
 - o11 tools describe TOOL — retrieve the current input schema.
 - o11 call TOOL --input FILE — execute a tool; use - for standard input.
