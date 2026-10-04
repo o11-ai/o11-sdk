@@ -4,7 +4,7 @@ import { exchangeCredential, inspectTarball, publisherEnvironment, registrySnaps
 const sha = 'a'.repeat(40);
 const env = { GITHUB_ACTIONS: 'true', GITHUB_REPOSITORY: 'o11-ai/o11-sdk', GITHUB_REF: 'refs/heads/main', GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_WORKFLOW_REF: 'o11-ai/o11-sdk/.github/workflows/npm-publish.yml@refs/heads/main', GITHUB_SHA: sha, RUNNER_ENVIRONMENT: 'github-hosted', ACTIONS_ID_TOKEN_REQUEST_URL: 'https://pipelines.actions.githubusercontent.com/oidc?api-version=1', ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'synthetic-request-credential' };
 const now = Date.now();
-const claims = { iss: 'https://token.actions.githubusercontent.com', aud: 'npm:registry.npmjs.org', repository: env.GITHUB_REPOSITORY, ref: env.GITHUB_REF, workflow_ref: env.GITHUB_WORKFLOW_REF, sha, sub: 'repo:o11-ai/o11-sdk:environment:npm-publish', runner_environment: 'github-hosted', exp: Math.floor(now / 1000) + 300 };
+const claims = { iss: 'https://token.actions.githubusercontent.com', aud: 'npm:registry.npmjs.org', repository: env.GITHUB_REPOSITORY, repository_id: '1403717429', repository_owner_id: '240864808', environment: 'npm-publish', ref: env.GITHUB_REF, workflow_ref: env.GITHUB_WORKFLOW_REF, sha, sub: 'repo:o11-ai@240864808/o11-sdk@1403717429:environment:npm-publish', runner_environment: 'github-hosted', exp: Math.floor(now / 1000) + 300 };
 const jwt = (value = claims) => `header.${Buffer.from(JSON.stringify(value)).toString('base64url')}.signature`;
 const json = (value: unknown, status = 200) => Response.json(value, { status });
 
@@ -20,7 +20,7 @@ test('only reviewed packages, exact stable versions and protected main workflow 
 
 test('OIDC preflight checks audience, main SHA, environment and expiry; npm verifies signature', () => {
   expect(() => verifyIdentity(jwt(), env, now)).not.toThrow();
-  for (const change of [{ aud: 'another' }, { repository: 'fork' }, { ref: 'branch' }, { workflow_ref: 'another' }, { sha: 'b'.repeat(40) }, { sub: 'repo:o11-ai/o11-sdk:ref:refs/heads/main' }, { exp: 0 }, { runner_environment: 'self-hosted' }]) {
+  for (const change of [{ aud: 'another' }, { repository: 'fork' }, { repository_id: '1' }, { repository_owner_id: '1' }, { environment: 'production' }, { ref: 'branch' }, { workflow_ref: 'another' }, { sha: 'b'.repeat(40) }, { sub: 'repo:o11-ai/o11-sdk:environment:npm-publish' }, { sub: 'repo:o11-ai/o11-sdk:ref:refs/heads/main' }, { exp: 0 }, { runner_environment: 'self-hosted' }]) {
     expect(() => verifyIdentity(jwt({ ...claims, ...change }), env, now)).toThrow();
   }
 });
