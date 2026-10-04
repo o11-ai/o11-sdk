@@ -88,7 +88,7 @@ async function jsonResponse(request: Request, url: string, init?: RequestInit): 
   return object(await response.json());
 }
 export async function registrySnapshot(request: Request, name: string, version: string) {
-  const metadata = await jsonResponse(request, `${registry}/${encodeURIComponent(name)}`);
+  const metadata = await jsonResponse(request, `${registry}/${encodeURIComponent(name)}?o11-preflight=${Date.now()}`);
   if (metadata.name !== name || object(metadata.versions)[version] !== undefined) refuse();
   return JSON.stringify(metadata);
 }
@@ -130,15 +130,32 @@ async function command(args: string[], cwd: string, env: Environment = process.e
 export async function unchangedRegistry(request: Request, name: string, version: string, initial: string) {
   if (await registrySnapshot(request, name, version) !== initial) refuse();
 }
+export async function confirmArtifact(request: Request, name: string, version: string, integrity: string, pause = Bun.sleep) {
+  let confirmed = false;
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const response = await request(`${registry}/${encodeURIComponent(name)}/${version}?o11-confirmation=${Date.now()}-${attempt}`, { redirect: 'error', signal: AbortSignal.timeout(30_000) });
+    if (response.ok) {
+      const published = object(await response.json());
+      if (published.name !== name || published.version !== version || object(published.dist).integrity !== integrity) refuse();
+      confirmed = true;
+      break;
+    }
+    if (response.status !== 404) refuse();
+    await pause(2_000);
+  }
+  if (!confirmed) refuse();
+}
 async function main() {
   console.log('Release stage: scope.');
   const scope = releaseScope(process.env, process.argv[2] ?? '', process.argv[3] ?? '');
+  const verifyOnly = process.argv[4] === '--verify-only';
+  if (process.argv[4] && !verifyOnly) refuse();
   const root = resolve(import.meta.dir, '..');
   const packageRoot = resolve(root, scope.directory);
   const metadata = object(JSON.parse(await readFile(resolve(packageRoot, 'package.json'), 'utf8')));
   if (metadata.name !== scope.name || metadata.version !== scope.version || metadata.private === true) refuse();
   console.log('Release stage: registry preflight.');
-  const initial = await registrySnapshot(fetch, scope.name, scope.version);
+  const initial = verifyOnly ? undefined : await registrySnapshot(fetch, scope.name, scope.version);
   const temporary = await mkdtemp(resolve(tmpdir(), 'o11-publish-'));
   try {
     const tarball = resolve(temporary, 'release.tgz');
@@ -148,31 +165,22 @@ async function main() {
     console.log('Release stage: artifact inspection.');
     inspectTarball(bytes, scope.name, scope.version);
     const integrity = `sha512-${createHash('sha512').update(bytes).digest('base64')}`;
-    console.log('Release stage: OIDC exchange.');
-    const token = await exchangeCredential(fetch, process.env, scope.name);
-    console.log('Release stage: registry continuity.');
-    await unchangedRegistry(fetch, scope.name, scope.version, initial);
-    console.log('Release stage: publish.');
-    // Bun requires a working-directory manifest even when publishing a tarball.
-    // Keep it minimal so no package lifecycle scripts receive the credential.
-    await Bun.write(resolve(temporary, 'package.json'), JSON.stringify({ name: scope.name, version: scope.version }));
-    await command([process.execPath, 'publish', tarball, '--ignore-scripts', '--access', 'public', '--tag', 'latest', '--registry', registry],
-      temporary, publisherEnvironment(process.env, token, temporary));
-    console.log('Release stage: registry confirmation.');
-    let confirmed = false;
-    for (let attempt = 0; attempt < 6; attempt++) {
-      const response = await fetch(`${registry}/${encodeURIComponent(scope.name)}/${scope.version}`, { redirect: 'error', signal: AbortSignal.timeout(30_000) });
-      if (response.ok) {
-        const published = object(await response.json());
-        if (published.name !== scope.name || published.version !== scope.version || object(published.dist).integrity !== integrity) refuse();
-        confirmed = true;
-        break;
-      }
-      if (response.status !== 404) refuse();
-      await Bun.sleep(2_000);
+    if (!verifyOnly) {
+      console.log('Release stage: OIDC exchange.');
+      const token = await exchangeCredential(fetch, process.env, scope.name);
+      console.log('Release stage: registry continuity.');
+      if (!initial) refuse();
+      await unchangedRegistry(fetch, scope.name, scope.version, initial);
+      console.log('Release stage: publish.');
+      // Bun requires a working-directory manifest even when publishing a tarball.
+      // Keep it minimal so no package lifecycle scripts receive the credential.
+      await Bun.write(resolve(temporary, 'package.json'), JSON.stringify({ name: scope.name, version: scope.version }));
+      await command([process.execPath, 'publish', tarball, '--ignore-scripts', '--access', 'public', '--tag', 'latest', '--registry', registry],
+        temporary, publisherEnvironment(process.env, token, temporary));
     }
-    if (!confirmed) refuse();
-    console.log(`Published and registry-confirmed ${scope.name}@${scope.version}.`);
+    console.log('Release stage: registry confirmation.');
+    await confirmArtifact(fetch, scope.name, scope.version, integrity);
+    console.log(`${verifyOnly ? 'Existing artifact verified' : 'Published and registry-confirmed'} ${scope.name}@${scope.version}.`);
   } finally { await rm(temporary, { recursive: true, force: true }); }
 }
 if (import.meta.main) main().catch((error: unknown) => {
