@@ -72,7 +72,7 @@ export function inspectTarball(bytes: Uint8Array, name: string, version: string)
 }
 async function jsonResponse(request: Request, url: string, init?: RequestInit): Promise<Json> {
   const response = await request(url, { ...init, redirect: 'error', signal: AbortSignal.timeout(30_000) });
-  if (!response.ok) refuse();
+  if (!response.ok) throw new PublishError(`HTTP ${response.status}.`);
   return object(await response.json());
 }
 export async function registrySnapshot(request: Request, name: string, version: string) {
@@ -97,7 +97,7 @@ export async function exchangeCredential(request: Request, env: Environment, nam
     method: 'POST', headers: { Authorization: `Bearer ${identity.value}` },
     redirect: 'error', signal: AbortSignal.timeout(30_000),
   });
-  if (response.status !== 201) refuse();
+  if (response.status !== 201) throw new PublishError(`OIDC exchange HTTP ${response.status}.`);
   const result = object(await response.json());
   const created = Date.parse(String(result.created));
   const expires = Date.parse(String(result.expires));
@@ -118,23 +118,31 @@ export async function unchangedRegistry(request: Request, name: string, version:
   if (await registrySnapshot(request, name, version) !== initial) refuse();
 }
 async function main() {
+  console.log('Release stage: scope.');
   const scope = releaseScope(process.env, process.argv[2] ?? '', process.argv[3] ?? '');
   const root = resolve(import.meta.dir, '..');
   const packageRoot = resolve(root, scope.directory);
   const metadata = object(JSON.parse(await readFile(resolve(packageRoot, 'package.json'), 'utf8')));
   if (metadata.name !== scope.name || metadata.version !== scope.version || metadata.private === true) refuse();
+  console.log('Release stage: registry preflight.');
   const initial = await registrySnapshot(fetch, scope.name, scope.version);
   const temporary = await mkdtemp(resolve(tmpdir(), 'o11-publish-'));
   try {
     const tarball = resolve(temporary, 'release.tgz');
+    console.log('Release stage: pack.');
     await command([process.execPath, 'pm', 'pack', '--ignore-scripts', '--filename', tarball], packageRoot);
     const bytes = await readFile(tarball);
+    console.log('Release stage: artifact inspection.');
     inspectTarball(bytes, scope.name, scope.version);
     const integrity = `sha512-${createHash('sha512').update(bytes).digest('base64')}`;
+    console.log('Release stage: OIDC exchange.');
     const token = await exchangeCredential(fetch, process.env, scope.name);
+    console.log('Release stage: registry continuity.');
     await unchangedRegistry(fetch, scope.name, scope.version, initial);
+    console.log('Release stage: publish.');
     await command([process.execPath, 'publish', tarball, '--access', 'public', '--tag', 'latest', '--registry', registry],
       temporary, publisherEnvironment(process.env, token, temporary));
+    console.log('Release stage: registry confirmation.');
     let confirmed = false;
     for (let attempt = 0; attempt < 6; attempt++) {
       const response = await fetch(`${registry}/${encodeURIComponent(scope.name)}/${scope.version}`, { redirect: 'error', signal: AbortSignal.timeout(30_000) });
@@ -151,7 +159,8 @@ async function main() {
     console.log(`Published and registry-confirmed ${scope.name}@${scope.version}.`);
   } finally { await rm(temporary, { recursive: true, force: true }); }
 }
-if (import.meta.main) main().catch(() => {
+if (import.meta.main) main().catch((error: unknown) => {
+  if (error instanceof PublishError) console.error(error.message);
   console.error('Trusted release failed; no credential or response body is logged.');
   process.exitCode = 1;
 });
