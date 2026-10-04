@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { exchangeCredential, inspectTarball, publisherEnvironment, registrySnapshot, unchangedRegistry, releaseScope, verifyIdentity } from './trusted-publish';
+import { confirmArtifact, exchangeCredential, inspectTarball, publisherEnvironment, registrySnapshot, unchangedRegistry, releaseScope, verifyIdentity } from './trusted-publish';
 
 const sha = 'a'.repeat(40);
 const env = { GITHUB_ACTIONS: 'true', GITHUB_REPOSITORY: 'o11-ai/o11-sdk', GITHUB_REF: 'refs/heads/main', GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_WORKFLOW_REF: 'o11-ai/o11-sdk/.github/workflows/npm-publish.yml@refs/heads/main', GITHUB_SHA: sha, RUNNER_ENVIRONMENT: 'github-hosted', ACTIONS_ID_TOKEN_REQUEST_URL: 'https://pipelines.actions.githubusercontent.com/oidc?api-version=1', ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'synthetic-request-credential' };
@@ -161,4 +161,23 @@ test('CLI refusal never prints supplied credentials or exceptions', async () => 
   expect(output).not.toContain(sensitive);
   expect(output).not.toContain(env.ACTIONS_ID_TOKEN_REQUEST_TOKEN);
   expect(output).toContain('no credential or response body is logged');
+});
+
+
+test('confirmation bypasses cached absence and verifies identity plus exact artifact without credentials', async () => {
+  const urls: string[] = [];
+  const metadata = { name: '@o11/tracking', version: '0.2.1', dist: { integrity: 'sha512-synthetic' } };
+  await confirmArtifact(async (url, init) => {
+    urls.push(url);
+    expect(init?.method).toBeUndefined();
+    expect(new Headers(init?.headers).has('authorization')).toBeFalse();
+    expect(new URL(url).searchParams.has('o11-confirmation')).toBeTrue();
+    return urls.length === 1 ? json({}, 404) : json(metadata);
+  }, '@o11/tracking', '0.2.1', 'sha512-synthetic', async () => {});
+  expect(urls.length).toBe(2);
+  expect(urls[0]).not.toBe(urls[1]);
+  for (const change of [{ name: 'other' }, { version: '0.2.0' }, { dist: { integrity: 'sha512-different' } }]) {
+    await expect(confirmArtifact(async () => json({ ...metadata, ...change }), '@o11/tracking', '0.2.1', 'sha512-synthetic', async () => {})).rejects.toThrow();
+  }
+  await expect(confirmArtifact(async () => json({}, 503), '@o11/tracking', '0.2.1', 'sha512-synthetic', async () => {})).rejects.toThrow();
 });

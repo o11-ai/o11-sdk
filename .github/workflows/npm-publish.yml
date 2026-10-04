@@ -10,6 +10,10 @@ on:
         description: Exact version already committed in the selected package
         type: string
         required: true
+      verify_only:
+        description: Verify exact existing artifact without publishing
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -43,4 +47,10 @@ jobs:
         env:
           RELEASE_PACKAGE: ${{ inputs.package }}
           RELEASE_VERSION: ${{ inputs.version }}
-        run: bun scripts/trusted-publish.ts "$RELEASE_PACKAGE" "$RELEASE_VERSION"
+          RELEASE_VERIFY_ONLY: ${{ inputs.verify_only }}
+        run: |
+          if [ "$RELEASE_VERIFY_ONLY" = "true" ]; then
+            bun scripts/trusted-publish.ts "$RELEASE_PACKAGE" "$RELEASE_VERSION" --verify-only
+          else
+            bun scripts/trusted-publish.ts "$RELEASE_PACKAGE" "$RELEASE_VERSION"
+          fi
