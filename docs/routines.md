@@ -6,6 +6,6 @@ The **description** is the user's whole-routine request. Preserve it unless the 
 
 Discover signal sources and use signals_check and the appropriate historical preview. Do not treat a bounded sample as proof of absence. Use engagement_routines_validate for the whole routine; unsupported automatic detection prevents publication. Existing graphs start with one signal and end on all paths. Opt-out ends outreach.
 
-Configure persona, sender, timezone, channels, knowledge selections and tools explicitly. Discover available settings with the tool catalog. Configure knowledge and connection access only within granted permissions. Provider login and consent remain interactive.
+For a detection-only request, connect the signal directly to End, leave channels empty and omit outreach, sender, persona and follow-ups. Configure persona, sender, timezone, channels, knowledge selections and tools explicitly when the request includes those actions. Discover available settings with the tool catalog. Configure knowledge and connection access only within granted permissions. Provider login and consent remain interactive.
 
 Saving is inactive. Publish the exact validated revision with engagement_routines_publish, then use engagement_routines_release to activate or pause an immutable version when authorized. Activation can contact customers. Inspect versions/releases to confirm the result. Never report an activated version merely because draft validation succeeded.

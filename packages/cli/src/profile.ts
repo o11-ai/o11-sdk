@@ -3,8 +3,10 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { z } from 'zod';
 export const profileName = z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/);
-const profilesSchema = z.record(z.string(), z.object({ server: z.string().url() }));
-const configRoot = () => process.env.O11_CONFIG_DIR ?? join(homedir(), '.config', 'o11');
+export const credentialMode = z.enum(['keyring', 'file']);
+export type CredentialMode = z.infer<typeof credentialMode>;
+const profilesSchema = z.record(z.string(), z.object({ server: z.string().url(), credentialStore: credentialMode.optional() }));
+export const configRoot = () => process.env.O11_CONFIG_DIR ?? join(homedir(), '.config', 'o11');
 export function serverUrl(value: string): URL {
   const url = new URL(value);
   if (url.username || url.password || url.search || url.hash || (url.protocol !== 'https:' && !(url.protocol === 'http:' && ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname)))) throw new Error('Use an HTTPS MCP URL. HTTP is allowed only on loopback.');
@@ -20,8 +22,13 @@ export async function loadServer(profile: string, override?: string) {
   if (!server) throw new Error('Run o11 login --server YOUR_MCP_URL first.');
   return serverUrl(server);
 }
-export async function saveServer(profile: string, server: URL) {
-  const data = await profiles(); data[profileName.parse(profile)] = { server: server.href };
+export async function loadCredentialMode(profile: string, server: URL, override?: string): Promise<CredentialMode> {
+  if (override !== undefined) return credentialMode.parse(override);
+  const saved = (await profiles())[profileName.parse(profile)];
+  return saved?.server === server.href ? saved.credentialStore ?? 'keyring' : 'keyring';
+}
+export async function saveServer(profile: string, server: URL, store: CredentialMode = 'keyring') {
+  const data = await profiles(); data[profileName.parse(profile)] = { server: server.href, credentialStore: store };
   await mkdir(configRoot(), { recursive: true, mode: 0o700 });
   await writeFile(join(configRoot(), 'profiles.json'), JSON.stringify(data), { mode: 0o600 });
 }
