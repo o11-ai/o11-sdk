@@ -1,6 +1,19 @@
 import type { OAuthClientInformationContext, OAuthClientProvider, OAuthDiscoveryState, StoredOAuthClientInformation, StoredOAuthTokens } from '@modelcontextprotocol/client';
+import type { CredentialMode } from './profile';
+import { fileStore } from './file-store';
 type Credentials = { clients: Record<string, StoredOAuthClientInformation>; tokens?: StoredOAuthTokens; discovery?: OAuthDiscoveryState };
 export interface SecretStore { read(): Promise<string | null>; write(value: string): Promise<void>; clear(): Promise<void> }
+export async function credentialStore(profile: string, server: URL, mode: CredentialMode = 'keyring'): Promise<SecretStore> {
+  if (mode === 'file') return fileStore(profile, server);
+  const unavailable = () => new Error('The OS keyring is unavailable. Unlock it and retry, or explicitly use --credential-store file for private local credential storage.');
+  let store: SecretStore;
+  try { store = await systemStore(profile, server); } catch { throw unavailable(); }
+  return {
+    read: async () => { try { return await store.read(); } catch { throw unavailable(); } },
+    write: async value => { try { await store.write(value); } catch { throw unavailable(); } },
+    clear: async () => { try { await store.clear(); } catch { throw unavailable(); } },
+  };
+}
 export async function systemStore(profile: string, server: URL): Promise<SecretStore> {
   const { AsyncEntry } = await import('@napi-rs/keyring');
   const entry = new AsyncEntry('o11-cli', `${profile}:${server.href}`, { linux: { store: 'secret-service' } });

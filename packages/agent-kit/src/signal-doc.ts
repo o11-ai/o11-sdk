@@ -9,6 +9,7 @@ New SDK receipts and synced PostHog events wake only routines subscribed to thos
 - “Pricing → Export → Home in one session”: kind events, scope session, operator sequence, three filtered steps.
 - “Created a report on Monday, exported it in a different session by Sunday”: scope customer, windowSeconds 604800. Session IDs may differ; customer identity must be verified.
 - “Created a report on web, exported that report twice on desktop”: each step selects its source; the export step has minimumOccurrences 2; correlationProperty is the shared report ID. Explicitly link the web and desktop identities first.
+- “Opened Excel, then left after at least two minutes”: scope session, operator sequence, observed opening and departure events, minimumElapsedSeconds 120. windowSeconds remains the upper bound; it cannot express the minimum by itself. Reuse the existing PostHog events and discovered Excel filters. A page leave proves departure from the add-in page, not closure of the desktop Excel process.
 - “Created three different reports”: one counted event with minimumOccurrences 3 and distinctProperty set to the report ID. Repeated delivery of an event never increases counts.
 - “Pricing → Export → Home three times”: nine ordered steps with unique IDs, minimumOccurrences 1 and one occurrence per step. Two cycles cannot match. A fixed expansion must fit the 12-step limit; general recurrence counting and larger expansions are unsupported. Counts on individual conditions do not count complete cycles.
 

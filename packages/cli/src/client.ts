@@ -1,5 +1,5 @@
 import { Client, StreamableHTTPClientTransport, type OAuthClientProvider } from '@modelcontextprotocol/client';
-export const version = '0.1.3';
+export const version = '0.1.4';
 export function newClient() { return new Client({ name: 'o11-cli', version }, { versionNegotiation: { mode: { pin: '2026-07-28' } } }); }
 export function transport(server: URL, provider?: OAuthClientProvider, token?: string) {
   return new StreamableHTTPClientTransport(server, { authProvider: token ? undefined : provider, requestInit: token ? { headers: { Authorization: `Bearer ${token}` }, redirect: 'error' } : { redirect: 'error' } });

@@ -83,7 +83,7 @@ test('reviewed built package tarball has exact file boundary and rejects mismatc
   const { join, resolve } = await import('node:path');
   const temp = await mkdtemp(join(tmpdir(), 'o11-public-artifact-'));
   try {
-    for (const [name, version] of [['tracking', '0.2.1'], ['cli', '0.1.3']]) {
+    for (const [name, version] of [['tracking', '0.2.1'], ['cli', '0.1.4']]) {
       const file = join(temp, `${name}.tgz`);
       const child = Bun.spawn([process.execPath, 'pm', 'pack', '--ignore-scripts', '--filename', file], { cwd: resolve(import.meta.dir, '..', 'packages', name!), stdout: 'ignore', stderr: 'ignore' });
       expect(await child.exited).toBe(0);
