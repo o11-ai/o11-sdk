@@ -130,9 +130,9 @@ async function command(args: string[], cwd: string, env: Environment = process.e
 export async function unchangedRegistry(request: Request, name: string, version: string, initial: string) {
   if (await registrySnapshot(request, name, version) !== initial) refuse();
 }
-export async function confirmArtifact(request: Request, name: string, version: string, integrity: string, pause = Bun.sleep) {
+export async function confirmArtifact(request: Request, name: string, version: string, integrity: string, pause: (milliseconds: number) => Promise<void> = Bun.sleep) {
   let confirmed = false;
-  for (let attempt = 0; attempt < 6; attempt++) {
+  for (let attempt = 0; attempt < 12; attempt++) {
     const response = await request(`${registry}/${encodeURIComponent(name)}/${version}?o11-confirmation=${Date.now()}-${attempt}`, { redirect: 'error', signal: AbortSignal.timeout(30_000) });
     if (response.ok) {
       const published = object(await response.json());
@@ -141,7 +141,9 @@ export async function confirmArtifact(request: Request, name: string, version: s
       break;
     }
     if (response.status !== 404) refuse();
-    await pause(2_000);
+    // Registry propagation can take minutes after a successful immutable upload.
+    // Retry only absence; mismatched artifacts and other failures still stop.
+    if (attempt < 11) await pause(Math.min(20_000, 2_000 * 2 ** attempt));
   }
   if (!confirmed) refuse();
 }

@@ -181,3 +181,15 @@ test('confirmation bypasses cached absence and verifies identity plus exact arti
   }
   await expect(confirmArtifact(async () => json({}, 503), '@o11/tracking', '0.2.1', 'sha512-synthetic', async () => {})).rejects.toThrow();
 });
+
+test('confirmation tolerates bounded registry propagation without retrying the upload', async () => {
+  let calls = 0;
+  const delays: number[] = [];
+  await confirmArtifact(async () => ++calls < 12 ? json({}, 404) : json({ name: '@o11/cli', version: '0.1.4', dist: { integrity: 'sha512-synthetic' } }), '@o11/cli', '0.1.4', 'sha512-synthetic', async delay => { delays.push(delay); });
+  expect(calls).toBe(12);
+  expect(delays.reduce((sum, delay) => sum + delay, 0)).toBe(170_000);
+  expect(Math.max(...delays)).toBe(20_000);
+  calls = 0;
+  await expect(confirmArtifact(async () => { calls++; return json({}, 404); }, '@o11/cli', '0.1.4', 'sha512-synthetic', async () => {})).rejects.toThrow();
+  expect(calls).toBe(12);
+});
