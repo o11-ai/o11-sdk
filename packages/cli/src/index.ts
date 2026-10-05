@@ -24,10 +24,10 @@ export async function run(argv: string[]) {
   const server = await loadServer(values.profile, values.server);
   const mode = await loadCredentialMode(values.profile, server, values['credential-store']);
   if (command === 'login') { print(await login(server, values.profile, values.scope, { credentialStore: mode, noBrowser: values['no-browser'] })); return; }
-  if (command === 'logout') { await (await credentialStore(values.profile, server, mode)).clear(); print({ loggedOut: true }); return; }
+  if (command === 'logout') { const store = await credentialStore(values.profile, server, mode); await store.exclusive!(() => store.clear()); print({ loggedOut: true }); return; }
   const token = process.env.O11_TOKEN;
   const provider = token ? undefined : await new CliAuth(redirectUrl, await credentialStore(values.profile, server, mode), async () => { throw new Error('Sign-in or additional consent is required. Run o11 login.'); }).load();
-  const client = await connect(server, provider, token);
+  const client = await connect(server, provider?.transportAuth(), token);
   if (command === 'mcp') { await bridge(client); return; }
   try {
     if (command === 'status') { const result = await client.callTool({ name: 'o11_setup', arguments: {} }); print(result); if (result.isError) process.exitCode = 1; return; }

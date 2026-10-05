@@ -1,6 +1,6 @@
 export const agentKitVersion = '0.2.1';
 // The setup handoff pins the CLI with remote sign-in support.
-export const cliVersion = '0.1.4';
+export const cliVersion = '0.1.5';
 export type SetupRequest = { apiUrl: string; organizationId: string; routineId?: string; revision?: number; request: string; trackingOnly?: boolean; trackingSourceId?: string };
 export function setupPrompt(input: SetupRequest): string {
   const endpoint = new URL('/api/mcp', input.apiUrl).href;

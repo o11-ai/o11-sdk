@@ -1,10 +1,10 @@
-import { Client, StreamableHTTPClientTransport, type OAuthClientProvider } from '@modelcontextprotocol/client';
-export const version = '0.1.4';
+import { Client, StreamableHTTPClientTransport, type AuthProvider, type OAuthClientProvider } from '@modelcontextprotocol/client';
+export const version = '0.1.5';
 export function newClient() { return new Client({ name: 'o11-cli', version }, { versionNegotiation: { mode: { pin: '2026-07-28' } } }); }
-export function transport(server: URL, provider?: OAuthClientProvider, token?: string) {
+export function transport(server: URL, provider?: OAuthClientProvider | AuthProvider, token?: string) {
   return new StreamableHTTPClientTransport(server, { authProvider: token ? undefined : provider, requestInit: token ? { headers: { Authorization: `Bearer ${token}` }, redirect: 'error' } : { redirect: 'error' } });
 }
-export async function connect(server: URL, provider?: OAuthClientProvider, token?: string) {
+export async function connect(server: URL, provider?: OAuthClientProvider | AuthProvider, token?: string) {
   const client = newClient();
   try { await client.connect(transport(server, provider, token)); return client; }
   catch (error) { await client.close(); throw error; }

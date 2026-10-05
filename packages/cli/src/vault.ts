@@ -1,14 +1,17 @@
 import type { OAuthClientInformationContext, OAuthClientProvider, OAuthDiscoveryState, StoredOAuthClientInformation, StoredOAuthTokens } from '@modelcontextprotocol/client';
 import type { CredentialMode } from './profile';
+import { coordinatedAuth } from './coordinated-auth';
+import { withCredentialLock } from './credential-lock';
 import { fileStore } from './file-store';
 type Credentials = { clients: Record<string, StoredOAuthClientInformation>; tokens?: StoredOAuthTokens; discovery?: OAuthDiscoveryState };
-export interface SecretStore { read(): Promise<string | null>; write(value: string): Promise<void>; clear(): Promise<void> }
+export interface SecretStore { read(): Promise<string | null>; write(value: string): Promise<void>; clear(): Promise<void>; exclusive?<T>(action: () => Promise<T>): Promise<T> }
 export async function credentialStore(profile: string, server: URL, mode: CredentialMode = 'keyring'): Promise<SecretStore> {
-  if (mode === 'file') return fileStore(profile, server);
+  if (mode === 'file') return { ...await fileStore(profile, server), exclusive: action => withCredentialLock(profile, server, mode, action) };
   const unavailable = () => new Error('The OS keyring is unavailable. Unlock it and retry, or explicitly use --credential-store file for private local credential storage.');
   let store: SecretStore;
   try { store = await systemStore(profile, server); } catch { throw unavailable(); }
   return {
+    exclusive: action => withCredentialLock(profile, server, mode, action),
     read: async () => { try { return await store.read(); } catch { throw unavailable(); } },
     write: async value => { try { await store.write(value); } catch { throw unavailable(); } },
     clear: async () => { try { await store.clear(); } catch { throw unavailable(); } },
@@ -26,9 +29,12 @@ export class CliAuth implements OAuthClientProvider {
   constructor(readonly redirectUrl: string, private store: SecretStore, private authorize: (url: URL) => Promise<void>, private scopes = 'o11:read o11:configure o11:credentials') {}
   async load() {
     const raw = await this.store.read();
+    this.saved = { clients: {} };
     if (raw) { const data: unknown = JSON.parse(raw); if (!data || typeof data !== 'object' || !('clients' in data)) throw new Error('Stored login is invalid. Run o11 logout, then login.'); this.saved = data as Credentials; }
     return this;
   }
+  exclusive<T>(action: () => Promise<T>): Promise<T> { return this.store.exclusive ? this.store.exclusive(action) : action(); }
+  transportAuth() { return coordinatedAuth(this); }
   get clientMetadata() { return { client_name: 'o11 CLI', redirect_uris: [this.redirectUrl], application_type: 'native' as const, grant_types: ['authorization_code', 'refresh_token'], response_types: ['code'], token_endpoint_auth_method: 'none', scope: this.scopes }; }
   state() { this.lastState = crypto.randomUUID(); return this.lastState; }
   clientInformation(ctx?: OAuthClientInformationContext) { return ctx ? this.saved.clients[ctx.issuer] : undefined; }

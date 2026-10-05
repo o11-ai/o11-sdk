@@ -83,7 +83,7 @@ test('reviewed built package tarball has exact file boundary and rejects mismatc
   const { join, resolve } = await import('node:path');
   const temp = await mkdtemp(join(tmpdir(), 'o11-public-artifact-'));
   try {
-    for (const [name, version] of [['tracking', '0.2.1'], ['cli', '0.1.4']]) {
+    for (const [name, version] of [['tracking', '0.2.1'], ['cli', '0.1.5']]) {
       const file = join(temp, `${name}.tgz`);
       const child = Bun.spawn([process.execPath, 'pm', 'pack', '--ignore-scripts', '--filename', file], { cwd: resolve(import.meta.dir, '..', 'packages', name!), stdout: 'ignore', stderr: 'ignore' });
       expect(await child.exited).toBe(0);
@@ -185,11 +185,11 @@ test('confirmation bypasses cached absence and verifies identity plus exact arti
 test('confirmation tolerates bounded registry propagation without retrying the upload', async () => {
   let calls = 0;
   const delays: number[] = [];
-  await confirmArtifact(async () => ++calls < 12 ? json({}, 404) : json({ name: '@o11/cli', version: '0.1.4', dist: { integrity: 'sha512-synthetic' } }), '@o11/cli', '0.1.4', 'sha512-synthetic', async delay => { delays.push(delay); });
+  await confirmArtifact(async () => ++calls < 12 ? json({}, 404) : json({ name: '@o11/cli', version: '0.1.5', dist: { integrity: 'sha512-synthetic' } }), '@o11/cli', '0.1.5', 'sha512-synthetic', async delay => { delays.push(delay); });
   expect(calls).toBe(12);
   expect(delays.reduce((sum, delay) => sum + delay, 0)).toBe(170_000);
   expect(Math.max(...delays)).toBe(20_000);
   calls = 0;
-  await expect(confirmArtifact(async () => { calls++; return json({}, 404); }, '@o11/cli', '0.1.4', 'sha512-synthetic', async () => {})).rejects.toThrow();
+  await expect(confirmArtifact(async () => { calls++; return json({}, 404); }, '@o11/cli', '0.1.5', 'sha512-synthetic', async () => {})).rejects.toThrow();
   expect(calls).toBe(12);
 });
