@@ -13,3 +13,17 @@ For a VM, SSH session, or browser on another computer, start `o11 login --server
 The second command sends the response to the waiting login; that original command verifies state and PKCE, exchanges the response, and confirms workspace setup. If the original command has stopped or timed out, start a new login and approve its new request. An old code cannot restore a stopped login. The registered loopback callback remains available when the browser and CLI run on the same computer.
 
 This package requires Node 22.12+ or Bun. Linux keyring storage requires Secret Service; explicit file storage works without it. Documentation is bundled and available offline with `o11 docs`.
+
+Parallel commands and the stdio MCP bridge coordinate OAuth updates per profile,
+server and credential store. A waiting command reloads the saved credentials and
+reuses another process's completed refresh. Refresh authentication is bounded to
+20 seconds; lock acquisition waits at most 30 seconds before returning a retryable
+busy error. Explicit browser login and logout share that coordination; a bridge
+holds no lock while idle. Noninteractive insufficient-scope responses require
+explicit human login rather than widening consent automatically.
+
+Coordination files contain only a process ID and random owner identifier, never
+credentials. A dead owner is recovered; a live owner is never age-unlocked. For
+an abandoned owner whose PID has been reused, inspect and stop the affected local
+process or remove the confirmed abandoned claim before retrying. Commands must
+use this fixed release together: older releases do not participate in the lock.
