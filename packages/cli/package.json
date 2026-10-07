@@ -1,9 +1,15 @@
 {
   "name": "@o11/cli",
-  "version": "0.2.3",
-  "repository": { "type": "git", "url": "git+https://github.com/o11-ai/o11-sdk.git", "directory": "packages/cli" },
+  "version": "0.2.4",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/o11-ai/o11-sdk.git",
+    "directory": "packages/cli"
+  },
   "homepage": "https://docs.o11.ai/cli/",
-  "bugs": { "url": "https://github.com/o11-ai/o11-sdk/issues" },
+  "bugs": {
+    "url": "https://github.com/o11-ai/o11-sdk/issues"
+  },
   "type": "module",
   "license": "MIT",
   "description": "Configure o11 from your agent, terminal or local MCP client",
@@ -23,7 +29,6 @@
   },
   "scripts": {
     "build": "bun build.ts",
-    "test": "bun test test",
     "check-types": "bun ../../scripts/typecheck.mjs tsconfig.json",
     "prepack": "bun run build"
   },

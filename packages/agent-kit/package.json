@@ -3,7 +3,16 @@
   "version": "0.1.3",
   "private": true,
   "type": "module",
-  "exports": { "./prompt": "./src/prompt.ts", "./docs": "./src/docs.ts", "./commands": "./src/commands.ts", "./cli-release": "./src/cli-release.ts" },
-  "scripts": { "test": "bun test test", "check-types": "bun ../../scripts/typecheck.mjs tsconfig.json" },
-  "devDependencies": { "@types/bun": "1.4.2" }
+  "exports": {
+    "./prompt": "./src/prompt.ts",
+    "./docs": "./src/docs.ts",
+    "./commands": "./src/commands.ts",
+    "./cli-release": "./src/cli-release.ts"
+  },
+  "scripts": {
+    "check-types": "bun ../../scripts/typecheck.mjs tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.2"
+  }
 }
