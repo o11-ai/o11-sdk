@@ -13,7 +13,9 @@ const subject = `repo:o11-ai@${ownerId}/o11-sdk@${repositoryId}:environment:npm-
 const workflow = `${repository}/.github/workflows/npm-publish.yml@refs/heads/main`;
 const audience = 'npm:registry.npmjs.org';
 const packages = {
-  '@o11/tracking': ['dist/index.js', 'dist/browser.js', 'src/index.ts', 'src/profile.ts', 'src/transport.ts', 'README.md', 'LICENSE'],
+  '@o11/tracking': ['dist/index.js', 'dist/browser.js', 'dist/replay.js', 'README.md', 'REPLAY.md', 'LICENSE',
+    ...['index', 'delivery', 'browser', 'profile', 'transport', 'replay', 'replay-privacy', 'replay-buffer',
+      'replay-contract', 'replay-session', 'replay-transport', 'posthog-replay', 'posthog-replay-data'].map(name => `src/${name}.ts`)],
   '@o11/cli': ['dist/index.js', 'README.md', 'LICENSE'],
 } as const;
 type Environment = Record<string, string | undefined>;
@@ -58,7 +60,7 @@ export function verifyIdentity(token: string, env: Environment, now: number) {
 export function inspectTarball(bytes: Uint8Array, name: string, version: string) {
   if (!Object.hasOwn(packages, name)) refuse();
   const allowed = packages[name as keyof typeof packages];
-  const tar = gunzipSync(bytes);
+  const tar = gunzipSync(bytes, { maxOutputLength: 16 * 1024 * 1024 });
   const found: string[] = [];
   for (let offset = 0; offset + 512 <= tar.length;) {
     const header = tar.subarray(offset, offset + 512);
@@ -70,7 +72,8 @@ export function inspectTarball(bytes: Uint8Array, name: string, version: string)
     if (prefix || !Number.isSafeInteger(size) || size < 0 || offset + 512 + size > tar.length
       || ![0, 48].includes(header[156] ?? -1) || !path.startsWith('package/')) refuse();
     const relative = path.slice(8);
-    if (found.includes(relative) || ![...allowed, 'package.json'].includes(relative)) refuse();
+    const replayChunk = name === '@o11/tracking' && /^dist\/[a-zA-Z0-9_-]+-[a-zA-Z0-9]+\.js$/.test(relative);
+    if (found.includes(relative) || !([...allowed, 'package.json'].includes(relative) || replayChunk)) refuse();
     found.push(relative);
     const text = tar.subarray(offset + 512, offset + 512 + size).toString('utf8');
     assertPublicText(text, relative);
@@ -80,7 +83,7 @@ export function inspectTarball(bytes: Uint8Array, name: string, version: string)
     }
     offset += 512 + Math.ceil(size / 512) * 512;
   }
-  if (found.length !== allowed.length + 1) refuse();
+  if (![...allowed, 'package.json'].every(path => found.includes(path))) refuse();
 }
 async function jsonResponse(request: Request, url: string, init?: RequestInit): Promise<Json> {
   const response = await request(url, { ...init, redirect: 'error', signal: AbortSignal.timeout(30_000) });
