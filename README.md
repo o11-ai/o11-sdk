@@ -4,9 +4,9 @@ Source for @o11/cli and @o11/tracking, plus their public setup guides. The priva
 
 Read the [developer documentation](https://docs.o11.ai), install [@o11/cli](https://www.npmjs.com/package/@o11/cli) or [@o11/tracking](https://www.npmjs.com/package/@o11/tracking), and report bugs through [GitHub issues](https://github.com/o11-ai/o11-sdk/issues).
 
-Use Bun to install dependencies, then run `bun run build`, `bun test` and `bun check-types`. Start with [the setup guide](docs/setup.md).
+Use Bun to install dependencies, then run `bun run build`. Start with [the setup guide](docs/setup.md).
 
-Edit the canonical guides in `packages/agent-kit/src/docs.ts` and `signal-doc.ts`, then run `bun run docs:sync`. CI verifies that the Markdown copies match the bundled guides.
+Edit the canonical guides in `packages/agent-kit/src/docs.ts` and `signal-doc.ts`, then run `bun run docs:sync`. Releases are published from the canonical application release pipeline. This repository does not run CI.
 
 Credentials belong in the operating system credential store or server secrets. Never commit tokens, customer data or local configuration.
 

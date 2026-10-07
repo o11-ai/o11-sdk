@@ -17,7 +17,6 @@
   "homepage": "https://docs.o11.ai",
   "scripts": {
     "build": "bun run --filter @o11/cli build && bun run --filter @o11/tracking build",
-    "test": "bun test packages",
     "check-types": "bun run --filter \"@o11/*\" check-types",
     "docs:sync": "bun scripts/sync-docs.ts",
     "docs:check": "bun scripts/sync-docs.ts --check"
