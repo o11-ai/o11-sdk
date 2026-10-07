@@ -1,5 +1,8 @@
 import { trackingTransport, type TrackingOptions, type TrackingReceipt } from './transport';
 import type { TrackingProfile, TrackingCoverage } from './profile';
+import { replaySessionRequest } from './replay-session';
+export { advanceTrackingDelivery, type DeliveryItem, type DeliveryState } from './delivery';
+export type { ReplaySession } from './replay-contract';
 export type { TrackingOptions, TrackingReceipt, TrackingFetch, ReceiptStatus } from './transport';
 export type { TrackingProfile, TrackingCoverage, ContactChannel } from './profile';
 export type TrackingEvent = {
@@ -20,6 +23,7 @@ export function validEvent(input: unknown): input is TrackingEvent {
 export function createTrackingClient(options: TrackingOptions) {
   const transport = trackingTransport(options);
   return {
+    replaySession: replaySessionRequest(options),
     track: (event: TrackingEvent): Promise<TrackingReceipt> => validEvent(event) ? transport.post('events', event) : Promise.resolve({ accepted: false, retryable: false, code: 'invalid_event' }),
     identify: (profile: TrackingProfile): Promise<TrackingReceipt> => transport.post('profiles', profile),
     coverage: (watermark: TrackingCoverage): Promise<TrackingReceipt> => transport.post('coverage', watermark),

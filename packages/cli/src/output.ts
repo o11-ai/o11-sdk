@@ -1,10 +1,21 @@
 import { open } from 'node:fs/promises';
+export class OutputSaveError extends Error {
+  readonly details: Record<string, unknown>;
+  constructor(path: string, result: unknown) {
+    super('The remote request completed, but its result could not be saved. Do not repeat the write; inspect its operation receipt.');
+    const operation = result && typeof result === 'object' && 'operation' in result ? result.operation : undefined;
+    this.details = { code: 'OUTPUT_SAVE_FAILED', message: this.message, remoteCompleted: true, path, ...(operation ? { operation } : {}) };
+  }
+}
 /** Reserve a private destination before dispatching a mutation. Never overwrite a receipt. */
 export async function callWithOutput<T>(call: () => Promise<T>, path?: string): Promise<T> {
   const file = path ? await open(path, 'wx', 0o600) : undefined;
   try {
     const result = await call();
-    if (file) { await file.writeFile(JSON.stringify(result, null, 2)); await file.sync(); }
+    if (file) {
+      try { await file.writeFile(JSON.stringify(result, null, 2)); await file.sync(); }
+      catch { throw new OutputSaveError(path!, result); }
+    }
     return result;
   } finally { await file?.close(); }
 }

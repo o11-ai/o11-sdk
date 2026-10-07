@@ -33,11 +33,12 @@ for (const execution of ['adapter', 'cli'] as const) test(`two independent ${exe
    await Bun.sleep(100);
    return Response.json({access_token:'test-access-new',refresh_token:'test-refresh-new',token_type:'Bearer',scope:'o11:read',expires_in:300});
   }
-  if(url.pathname==='/mcp'){
+  if(url.pathname==='/mcp' || url.pathname==='/api/agent/v1/status'){
    if(request.headers.get('authorization') !== 'Bearer test-access-new'){
     await new Promise<void>(resolve=>{waiting.push(resolve);if(waiting.length===2)for(const release of waiting)release();});
     return new Response(null,{status:401});
    }
+   if(url.pathname==='/api/agent/v1/status') return Response.json({result:{ready:true}});
    return createMcpHandler(()=>{
     const mcp=new McpServer({name:'synthetic-qa',version:'1.0.0'});
     mcp.registerTool('o11_setup',{inputSchema:z.object({})},async()=>({content:[{type:'text',text:'synthetic setup'}],structuredContent:{ready:true}}));
@@ -56,20 +57,23 @@ for (const execution of ['adapter', 'cli'] as const) test(`two independent ${exe
   const children=[spawn(),spawn()];
   const output=await Promise.all(children.map(async child=>({exit:await child.exited,out:await new Response(child.stdout).text(),err:await new Response(child.stderr).text()})));
   expect(output.map(item=>item.exit)).toEqual([0,0]);
-  expect(output.every(item=>execution === 'adapter' ? JSON.parse(item.out).refreshed===true : JSON.parse(item.out).structuredContent.ready===true)).toBeTrue();
+  expect(output.every(item=>execution === 'adapter' ? JSON.parse(item.out).refreshed===true : JSON.parse(item.out).result.ready===true)).toBeTrue();
   expect(output.every(item=>!item.err.includes('invalid_grant'))).toBeTrue();
   expect(refreshes).toBe(1);expect(invalidGrants).toBe(0);
   if(execution==='cli'){
    const args=command.slice(1,-1).concat('mcp');
-   const bridge=new Client({name:'synthetic-bridge-test',version:'1.0.0'});
+   for (const mode of ['modern', 'legacy'] as const) {
+   const bridge=new Client({name:'synthetic-bridge-test',version:'1.0.0'}, { versionNegotiation: { mode: mode === 'modern' ? { pin: '2026-07-28' } : 'legacy' } });
    const stdio=new StdioClientTransport({command:process.execPath,args,env:Object.fromEntries(Object.entries({...process.env,O11_CONFIG_DIR:root}).filter((entry):entry is [string,string]=>typeof entry[1]==='string')),stderr:'pipe'});
    try{
     await bridge.connect(stdio);
+    expect((await bridge.listResourceTemplates()).resourceTemplates).toEqual([]);
     expect((await bridge.listTools()).tools.some(tool=>tool.name==='o11_setup')).toBeTrue();
     const parallel=spawn();expect(await parallel.exited).toBe(0);
     expect((await bridge.callTool({name:'o11_setup',arguments:{}})).structuredContent).toEqual({ready:true});
     expect(refreshes).toBe(1); // A live stdio bridge does not hold a process-lifetime lock.
    }finally{await bridge.close();}
+   }
   }
   const saved=JSON.parse((await store.read())!);
   expect(saved.tokens.refresh_token).toBe('test-refresh-new');expect(saved.tokens.scope).toBe('o11:read');
@@ -119,7 +123,7 @@ test('bounded authentication timeout releases coordination without erasing a val
  await store.write(JSON.stringify({clients:{[issuer]:{client_id:'test-client',issuer}},tokens:{access_token:'test-old',refresh_token:'test-refresh',token_type:'Bearer',issuer},discovery:{authorizationServerUrl:issuer,authorizationServerMetadata:{issuer,token_endpoint:`${issuer}/token`,authorization_endpoint:`${issuer}/authorize`,response_types_supported:['code']},resourceMetadata:{resource:server.href,authorization_servers:[issuer]}}}));
  const provider=await new CliAuth('http://127.0.0.1:49191/callback',store,async()=>{throw new Error('Explicit sign-in required.');}).load();
  const adapter=coordinatedAuth(provider,20);await adapter.token();
- await expect(adapter.onUnauthorized!({serverUrl:server,response:new Response(null,{status:401}),fetchFn:async(_input,init)=>new Promise<Response>((_resolve,reject)=>{init?.signal?.addEventListener('abort',()=>reject(new DOMException('Timed out','AbortError')),{once:true});})})).rejects.toThrow('Explicit sign-in required.');
+ await expect(adapter.onUnauthorized!({serverUrl:server,response:new Response(null,{status:401}),fetchFn:async(_input,init)=>new Promise<Response>((_resolve,reject)=>{init?.signal?.addEventListener('abort',()=>reject(new DOMException('Timed out','AbortError')),{once:true});})})).rejects.toThrow('Timed out');
  expect(JSON.parse((await store.read())!).tokens.refresh_token).toBe('test-refresh');
  expect(await store.exclusive!(async()=>true)).toBeTrue();
 }));

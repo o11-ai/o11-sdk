@@ -18,7 +18,7 @@ test('a clean CLI build removes stale artifacts and leaves a runnable offline do
   const node = Bun.spawnSync(['node', 'dist/index.js', '--version'], { cwd });
   const manifest: { version: string } = await Bun.file(new URL('../package.json', import.meta.url)).json();
   expect(node.exitCode).toBe(0);
-  expect(JSON.parse(node.stdout.toString())).toEqual({ version: manifest.version });
+  expect(JSON.parse(node.stdout.toString())).toMatchObject({ version: manifest.version, bundleSha256: expect.stringMatching(/^[a-f0-9]{64}$/) });
   const nodeDocs = Bun.spawnSync(['node', 'dist/index.js', 'docs', 'setup'], { cwd });
   expect(nodeDocs.exitCode).toBe(0);
   expect(JSON.parse(nodeDocs.stdout.toString())).toMatchObject({ id: 'setup' });
@@ -28,7 +28,7 @@ test('a clean CLI build removes stale artifacts and leaves a runnable offline do
     expect(packed.exitCode).toBe(0);
     const contents = Bun.spawnSync(['tar', '-tzf', join(directory, 'cli.tgz')]);
     expect(contents.exitCode).toBe(0);
-    expect(contents.stdout.toString().trim().split('\n').sort()).toEqual(['package/LICENSE', 'package/README.md', 'package/dist/index.js', 'package/package.json']);
+    expect(contents.stdout.toString().trim().split(/\r?\n/).sort()).toEqual(['package/LICENSE', 'package/README.md', 'package/dist/index.js', 'package/package.json']);
     const extracted = Bun.spawnSync(['tar', '-xzf', join(directory, 'cli.tgz'), '-C', directory]);
     expect(extracted.exitCode).toBe(0);
     const packagedManifest = await Bun.file(join(directory, 'package/package.json')).json();
@@ -36,4 +36,4 @@ test('a clean CLI build removes stale artifacts and leaves a runnable offline do
     expect(packagedManifest.dependencies['@napi-rs/keyring']).toBeDefined();
     expect(await Bun.file(join(directory, 'package/dist/index.js')).text()).toContain('credential-store');
   } finally { await rm(directory, { recursive: true, force: true }); }
-});
+}, 30000);

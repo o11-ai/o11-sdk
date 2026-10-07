@@ -1,12 +1,14 @@
-import { Client, StreamableHTTPClientTransport, type AuthProvider, type OAuthClientProvider } from '@modelcontextprotocol/client';
-export const version = '0.1.5';
-export function newClient() { return new Client({ name: 'o11-cli', version }, { versionNegotiation: { mode: { pin: '2026-07-28' } } }); }
-export function transport(server: URL, provider?: OAuthClientProvider | AuthProvider, token?: string) {
+import type { Client, AuthProvider, OAuthClientProvider } from '@modelcontextprotocol/client';
+import { version } from './version';
+export { version } from './version';
+export async function newClient() { const { Client } = await import('@modelcontextprotocol/client'); return new Client({ name: 'o11-cli', version }, { versionNegotiation: { mode: { pin: '2026-07-28' } } }); }
+export async function transport(server: URL, provider?: OAuthClientProvider | AuthProvider, token?: string) {
+  const { StreamableHTTPClientTransport } = await import('@modelcontextprotocol/client');
   return new StreamableHTTPClientTransport(server, { authProvider: token ? undefined : provider, requestInit: token ? { headers: { Authorization: `Bearer ${token}` }, redirect: 'error' } : { redirect: 'error' } });
 }
 export async function connect(server: URL, provider?: OAuthClientProvider | AuthProvider, token?: string) {
-  const client = newClient();
-  try { await client.connect(transport(server, provider, token)); return client; }
+  const client = await newClient();
+  try { await client.connect(await transport(server, provider, token)); return client; }
   catch (error) { await client.close(); throw error; }
 }
 export async function allTools(client: Client) {

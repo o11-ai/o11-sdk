@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from 'bun:test';
-import { chmod, mkdtemp, readdir, rm, stat, symlink } from 'node:fs/promises';
+import { chmod, mkdtemp, readFile, readdir, rm, stat, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileStore } from '../src/file-store';
@@ -52,4 +52,16 @@ test('file credentials reject public permissions and symbolic links without expo
   await chmod(path, 0o600); await rm(path); await symlink(join(directory!, 'profiles.json'), path);
   await expect(store.read()).rejects.toThrow('symbolic'); await expect(store.write('replacement')).rejects.toThrow('symbolic');
   await rm(path); await chmod(root, 0o755); await expect(store.read()).rejects.toThrow('private');
+});
+test('parallel profile updates preserve every login and publish a complete private file', async () => {
+  const server = await setup();
+  await Promise.all(Array.from({ length: 12 }, (_, index) => saveServer(`profile-${index}`, server, 'file')));
+  const path = join(directory!, 'profiles.json');
+  const saved: Record<string, unknown> = JSON.parse(await readFile(path, 'utf8'));
+  expect(Object.keys(saved)).toHaveLength(12);
+  for (let index = 0; index < 12; index++) expect(saved[`profile-${index}`]).toEqual({ server: server.href, credentialStore: 'file' });
+  expect((await stat(path)).mode & 0o777).toBe(0o600);
+  await chmod(path, 0o644);
+  await saveServer('updated', server, 'keyring');
+  expect((await stat(path)).mode & 0o777).toBe(0o600);
 });

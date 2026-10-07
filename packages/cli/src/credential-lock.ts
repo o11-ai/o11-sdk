@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { lstat, mkdir, mkdtemp, open, readdir, rename, rm, rmdir, unlink } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { homedir } from 'node:os';
 import { setTimeout as delay } from 'node:timers/promises';
 import { configRoot, profileName, type CredentialMode } from './profile';
@@ -22,9 +22,20 @@ export function credentialLockPath(profile: string, server: URL, mode: Credentia
 }
 export async function withCredentialLock<T>(profile: string, server: URL, mode: CredentialMode, action: () => Promise<T>, options: { waitMs?: number; orphanMs?: number } = {}): Promise<T> {
   const directory = join(lockRoot(mode), 'credential-locks');
+  return withDirectoryLock(directory, credentialLockPath(profile, server, mode), action, options);
+}
+export async function withProfileLock<T>(action: () => Promise<T>): Promise<T> {
+  const directory = join(configRoot(), 'profile-locks');
+  return withDirectoryLock(directory, join(directory, 'profiles'), action);
+}
+export async function withWorkflowLock<T>(journal: string, action: () => Promise<T>): Promise<T> {
+  const directory = join(dirname(journal), 'workflow-locks');
+  const name = createHash('sha256').update(journal).digest('hex');
+  return withDirectoryLock(directory, join(directory, name), action);
+}
+async function withDirectoryLock<T>(directory: string, path: string, action: () => Promise<T>, options: { waitMs?: number; orphanMs?: number } = {}): Promise<T> {
   await mkdir(directory, { recursive: true, mode: 0o700 });
   await privateDirectory(directory);
-  const path = credentialLockPath(profile, server, mode);
   const owner = `${process.pid}-${randomUUID()}.owner`;
   const deadline = Date.now() + (options.waitMs ?? 30_000);
   // Publish an already populated directory atomically: no empty acquisition window

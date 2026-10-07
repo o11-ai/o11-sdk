@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { rm } from 'node:fs/promises';
 import { assertPackageOutput } from '../../scripts/public-artifacts';
 await rm(new URL('./dist/', import.meta.url), { recursive: true, force: true });
@@ -5,4 +6,4 @@ await rm(new URL('./dist/', import.meta.url), { recursive: true, force: true });
 // dependencies, including the native credential-store package, as imports.
 const cli = await Bun.build({ entrypoints: ['./src/index.ts'], outdir: './dist', target: 'node', external: ['@modelcontextprotocol/client', '@modelcontextprotocol/server', '@napi-rs/keyring', 'zod'] });
 if (!cli.success) throw new AggregateError(cli.logs, 'CLI build failed');
-await assertPackageOutput(new URL('./dist/', import.meta.url).pathname, ['index.js']);
+await assertPackageOutput(fileURLToPath(new URL('./dist/', import.meta.url)), ['index.js']);

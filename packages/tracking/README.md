@@ -1,6 +1,6 @@
 # o11 tracking
 
-Dependency-free **server-only** JavaScript/TypeScript SDK. Reuse connected PostHog or read-only database evidence first; instrument missing business events.
+JavaScript/TypeScript SDK with a dependency-free server entry for business events and a separate browser entry for native session recordings. New business-event setup uses o11 tracking; reuse received evidence and instrument missing delivery at existing application handlers. Add replay when requested or needed by the routine, and reuse one application recording lifecycle. Preserve existing PostHog routines, history, analytics and recording settings. See [recording setup and PostHog sharing](REPLAY.md) for native capture and sharing existing PostHog recordings without changing PostHog.
 
 Create an application source in **Integrations → Application tracking**, copy its setup prompt into your coding agent, and register actual event schemas. Create a named key for **Local development**, select contact sync only when needed, and store the one-time secret in server configuration. Production uses a separate key and server secret. Neither key belongs in a browser bundle, public environment variable, prompt, log or source control.
 
@@ -27,8 +27,10 @@ HTTP 202 and `accepted: true` mean queued. Poll `receipt` for `processed` or `re
 
 Rotate keys with at most two active keys per source/environment. Install the replacement, confirm receipts using it, drain pending deliveries, then revoke the old key. Inspect key expiry, last use and recent results in Integrations. Pause a source to stop ingestion/detection; resume after reconciling it.
 
+Use `advanceTrackingDelivery(item, client, now)` with your existing durable outbox rather than implementing receipt handling for each routine. Persist its returned phase, status, receipt ID, receipt start time and retry time. It confirms the profile before sending the event, verifies receipt kinds, and preserves unconfirmed receipts for operator review after 24 hours. `receipt_review_required` does not prove an operation was unprocessed; reconcile the server outcome before retrying. Keep pending and rejected items available for recovery and apply your retention policy to processed rows. Once-per-person behavior belongs to the routine's `enrollmentFrequency`, not an application `first_prompt` marker.
+
 The browser export refuses credential use. HTTPS is required except loopback, redirects are refused, payloads are bounded to 32 KB, and event properties are declared scalars (20 fields, 2,000 characters per string). Default environment is production for existing server installations; development/test runtimes require explicit `environment: 'test'`. Keys have source/environment scopes, optional profile permission, hash-only storage and expiry. API limits: 600 authenticated requests/minute/source and 6,000/minute/workspace, including receipt polling.
 
 For browser activity, use PostHog or an authenticated application backend that derives the signed-in customer ID. Label forwarded client observations `evidence: 'client'` in the event manifest. Select **Require confirmed business activity** for rules requiring server facts. Do not label browser claims as server-confirmed business outcomes.
 
-Read versioned docs with `o11 docs tracking` or `/api/agent-docs/tracking`. Replay/autocapture, SMS, arbitrary SQL/account joins and implicit identity/permission merging are not provided by this SDK.
+Read versioned docs with `o11 docs tracking` or `/api/agent-docs/tracking`. The server entry does not provide replay/autocapture; native recording uses the separate `@o11/tracking/replay` entry. Pass the actual PostHog instance as the replay client’s `posthog` option to share supported recordings without a second recorder. SMS, arbitrary SQL/account joins and implicit identity/permission merging are not provided by this SDK.

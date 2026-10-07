@@ -1,12 +1,13 @@
 {
-  "name": "@o11/tracking", "version": "0.2.1", "type": "module",
+  "name": "@o11/tracking", "version": "0.2.4", "type": "module",
   "repository": { "type": "git", "url": "git+https://github.com/o11-ai/o11-sdk.git", "directory": "packages/tracking" },
   "homepage": "https://docs.o11.ai/tracking/",
   "bugs": { "url": "https://github.com/o11-ai/o11-sdk/issues" },
   "description": "Minimal server-side o11 event tracking", "license": "MIT",
-  "exports": { ".": { "types": "./src/index.ts", "workerd": "./dist/index.js", "node": "./dist/index.js", "browser": "./dist/browser.js", "default": "./dist/index.js" } },
-  "files": ["dist/index.js", "dist/browser.js", "src/index.ts", "src/profile.ts", "src/transport.ts", "README.md", "LICENSE"],
+  "exports": { ".": { "types": "./src/index.ts", "workerd": "./dist/index.js", "node": "./dist/index.js", "browser": "./dist/browser.js", "default": "./dist/index.js" }, "./replay": { "types": "./src/replay.ts", "default": "./dist/replay.js" } },
+  "files": ["dist", "src", "README.md", "REPLAY.md", "LICENSE"],
   "publishConfig": { "access": "public" },
   "scripts": { "build": "bun build.ts", "test": "bun test test", "check-types": "bun ../../scripts/typecheck.mjs tsconfig.json", "prepack": "bun run build" },
+  "dependencies": { "@rrweb/record": "2.1.6" },
   "devDependencies": { "@types/bun": "1.4.2" }
 }
