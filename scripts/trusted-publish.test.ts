@@ -83,13 +83,25 @@ test('reviewed built package tarball has exact file boundary and rejects mismatc
   const { join, resolve } = await import('node:path');
   const temp = await mkdtemp(join(tmpdir(), 'o11-public-artifact-'));
   try {
-    for (const [name, version] of [['tracking', '0.2.1'], ['cli', '0.1.5']]) {
+    for (const name of ['tracking', 'cli'] as const) {
+      const packageRoot = resolve(import.meta.dir, '..', 'packages', name);
+      const { version } = await Bun.file(join(packageRoot, 'package.json')).json() as { version: string };
       const file = join(temp, `${name}.tgz`);
-      const child = Bun.spawn([process.execPath, 'pm', 'pack', '--ignore-scripts', '--filename', file], { cwd: resolve(import.meta.dir, '..', 'packages', name!), stdout: 'ignore', stderr: 'ignore' });
+      const child = Bun.spawn([process.execPath, 'pm', 'pack', '--ignore-scripts', '--filename', file], { cwd: packageRoot, stdout: 'ignore', stderr: 'ignore' });
       expect(await child.exited).toBe(0);
       const bytes = await readFile(file);
-      expect(() => inspectTarball(bytes, `@o11/${name}`, version!)).not.toThrow();
+      expect(() => inspectTarball(bytes, `@o11/${name}`, version)).not.toThrow();
       expect(() => inspectTarball(bytes, `@o11/${name}`, '99.0.0')).toThrow();
+      if (name === 'tracking') {
+        const unreviewed = join(packageRoot, 'dist', 'unreviewed.txt');
+        try {
+          await Bun.write(unreviewed, 'Unreviewed content');
+          const repack = Bun.spawn([process.execPath, 'pm', 'pack', '--ignore-scripts', '--filename', file], { cwd: packageRoot, stdout: 'ignore', stderr: 'ignore' });
+          expect(await repack.exited).toBe(0);
+          const unexpected = await readFile(file);
+          expect(() => inspectTarball(unexpected, '@o11/tracking', version)).toThrow();
+        } finally { await rm(unreviewed, { force: true }); }
+      }
     }
   } finally { await rm(temp, { recursive: true, force: true }); }
 });
