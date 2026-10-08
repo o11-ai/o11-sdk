@@ -7,10 +7,10 @@ Start with \`o11_setup({routineId})\` for an existing routine. It returns the sa
 | --- | --- | --- |
 | Inspect access | o11_setup, engagement_capabilities | Correct workspace, required scopes and runtime readiness. |
 | Inspect sources and history | signals_sources, signals_resources, signals_sample, research_sessions, research_customer | Existing evidence, identity, session boundaries and complete history for the requested rule. |
-| Configure | engagement_routines_create or engagement_routines_save | Exact detection, delivery mode, sender, email and stopping conditions saved in one inactive draft. |
+| Configure | engagement_routines_create or engagement_routines_reconcile | Exact detection, delivery mode, sender, email and stopping conditions saved in one inactive draft. |
 | Check the rule | engagement_routines_validateSignal, signals_previewEvents | Validate the saved definition and instruction at the current revision. Test matching and excluded cases separately; structural validation does not establish detection accuracy. |
 | Check the routine | engagement_routines_validate | Valid result for the current saved revision and intended environment. |
-| Inspect setup controls | engagement_routines_setupStatus | Source import progress, retained history coverage and messaging availability for that revision. |
+| Inspect setup controls | engagement_routines_setupReview | Source import progress, retained history coverage and messaging availability for that revision. |
 | Enable session detection | engagement_routines_configureMonitoring | For session search or manual review, add the exact validated revision using sourceId and expectedVersion from research_monitoring. Preserve other selections and verify current setup state. |
 | Publish | engagement_routines_publish | New immutable version returned. Publishing does not activate it. |
 | Activate | engagement_routines_release | That version active in the intended environment. Activation can start outreach. |

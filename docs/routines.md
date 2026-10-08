@@ -10,7 +10,7 @@ Lead progress with the operational state and next action. Distinguish draft prep
 
 For once per person, set the trigger draft enrollmentFrequency to once_per_person. Repeat is the backward-compatible default. This is routine enrollment, not first lifetime application activity. Keep the same routine ID across edits; failed runs use engagement_retry on the existing run after inspecting delivery outcomes. Do not reset source markers to retry outreach.
 
-Use engagement_routines_list or engagement_routines_get to read a routine. Use engagement_routines_create to create one or engagement_routines_save to replace the complete draft. Inspect each tool's input schema: it is generated from the same validators used by the dashboard. Never guess IDs or fields. Save requires the current revision; conflicts require reading and reconciling current state.
+Use engagement_routines_list or engagement_routines_get to read a routine. Use engagement_routines_create to create one or engagement_routines_save to replace the complete draft. Inspect each tool's input schema: it is generated from the same validators used by the dashboard. Never guess IDs or fields. Use engagement_routines_reconcile with base set to the exact get result before editing, or supply base to save, to merge independent concurrent edits. Resolve returned overlapping fields without discarding other changes. Saves without base require the current revision. Report-only saves and validation metadata keep that revision; read the result. setupReview returns the current configuration and readiness together.
 
 The **description** is the user's whole-routine request. Preserve it unless the user changes their request. The **nodes**, **edges** and **agent** fields are the executable configuration. Manual structured edits do not rewrite the description. Each signal node's signalAuthoring retains its own original prompt and structured definition. Follow-up nodes use agentFlow for exact messages, waits, reply branches, tool actions and stopping conditions. Both the complete graph and all nested settings can be configured through the same save operation.
 
@@ -30,10 +30,10 @@ Start with `o11_setup({routineId})` for an existing routine. It returns the save
 | --- | --- | --- |
 | Inspect access | o11_setup, engagement_capabilities | Correct workspace, required scopes and runtime readiness. |
 | Inspect sources and history | signals_sources, signals_resources, signals_sample, research_sessions, research_customer | Existing evidence, identity, session boundaries and complete history for the requested rule. |
-| Configure | engagement_routines_create or engagement_routines_save | Exact detection, delivery mode, sender, email and stopping conditions saved in one inactive draft. |
+| Configure | engagement_routines_create or engagement_routines_reconcile | Exact detection, delivery mode, sender, email and stopping conditions saved in one inactive draft. |
 | Check the rule | engagement_routines_validateSignal, signals_previewEvents | Validate the saved definition and instruction at the current revision. Test matching and excluded cases separately; structural validation does not establish detection accuracy. |
 | Check the routine | engagement_routines_validate | Valid result for the current saved revision and intended environment. |
-| Inspect setup controls | engagement_routines_setupStatus | Source import progress, retained history coverage and messaging availability for that revision. |
+| Inspect setup controls | engagement_routines_setupReview | Source import progress, retained history coverage and messaging availability for that revision. |
 | Enable session detection | engagement_routines_configureMonitoring | For session search or manual review, add the exact validated revision using sourceId and expectedVersion from research_monitoring. Preserve other selections and verify current setup state. |
 | Publish | engagement_routines_publish | New immutable version returned. Publishing does not activate it. |
 | Activate | engagement_routines_release | That version active in the intended environment. Activation can start outreach. |
