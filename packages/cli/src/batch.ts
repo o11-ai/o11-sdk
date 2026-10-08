@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto';
 import { readPrivateJson, writePrivateJson } from './local-state';
 import { withWorkflowLock } from './credential-lock';
 import { object } from './http-client';
+import { applyPinnedEnvironment } from './schema-flags';
 const manifest = z.object({ version: z.literal(1), organizationId: z.string().optional(), environment: z.enum(['test', 'production']).optional(),
   concurrency: z.number().int().min(1).max(8).default(1),
   items: z.array(z.object({ id: z.string().min(1).max(100), path: z.string().regex(/^[a-z][A-Za-z0-9]*(\.[a-z][A-Za-z0-9]*)+$/), input: z.record(z.string(), z.unknown()) }).strict()).min(1).max(100),
@@ -40,8 +41,9 @@ async function batch(input: z.infer<typeof manifest>, api: Pick<ApiClient, 'requ
       const index = next++, item = input.items[index]; if (!item) return;
       if (completed[item.id] === true) { results[index] = { id: item.id, state: 'completed', resumed: true, ...(typeof item.input._operationId === 'string' ? { operationId: item.input._operationId } : {}) }; continue; }
       try {
-        const args = pinnedInput(item.input, { organizationId: input.organizationId, environment: input.environment });
+        const pinned = pinnedInput(item.input, { organizationId: input.organizationId, environment: input.environment });
         const descriptor = await describe(item.path);
+        const args = applyPinnedEnvironment(pinned, item.input.environment === undefined && !!input.environment, descriptor);
         if (payload(descriptor).mutation === true && !z.uuid().safeParse(args._operationId).success) throw new Error('Batch writes require a stable UUID _operationId in each item input.');
         const check = validateInput(args, descriptor);
         if (!check.valid) { results[index] = { id: item.id, state: 'invalid', issues: check.issues }; continue; }

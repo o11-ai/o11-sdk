@@ -20,6 +20,14 @@ export function schemaProperties(schema: unknown): Record<string, unknown> {
   return Object.assign({}, ...(Array.isArray(schema.allOf) ? schema.allOf.map(schemaProperties) : []), object(schema.properties) ? schema.properties : {});
 }
 
+/** Omit an implicit pin only when a strict command has no environment input. */
+export function applyPinnedEnvironment(input: Record<string, unknown>, pinned: boolean, descriptor: Record<string, unknown>) {
+  const schema = payload(descriptor).inputSchema;
+  if (!pinned || !object(schema) || schema.additionalProperties !== false || Object.hasOwn(schemaProperties(schema), 'environment')) return input;
+  const { environment: ignored, ...result } = input;
+  return result;
+}
+
 export function applySchemaFlags(input: Record<string, unknown>, values: Record<string, unknown>, flags: string[], descriptor: Record<string, unknown>) {
   const properties = schemaProperties(payload(descriptor).inputSchema);
   const result = { ...input };

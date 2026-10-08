@@ -24,7 +24,7 @@ import { serviceToken } from './service-token';
 import { diagnosticBundle } from './diagnostics';
 import { payload } from './health';
 import { commandExample } from './examples';
-import { parseCommandArgs, applySchemaFlags } from './schema-flags';
+import { parseCommandArgs, applySchemaFlags, applyPinnedEnvironment } from './schema-flags';
 
 export async function run(argv: string[]) {
   const { values, positionals, dynamic } = parseCommandArgs(argv);
@@ -83,6 +83,7 @@ export async function run(argv: string[]) {
   const profile = await selectedProfile(values.profile);
   if (command === 'profiles') { await emit(async () => profilesCommand(name, positionals[2], profile, input)); return; }
   const pins = await profilePins(profile);
+  const pinnedEnvironment = input.environment === undefined && !!(values['expect-environment'] ?? pins.environment);
   input = pinnedInput(input, { organizationId: values['expect-organization'] ?? pins.organizationId, environment: values['expect-environment'] ?? pins.environment });
   const server = await loadServer(profile, values.server);
   if (command === 'update') {
@@ -97,7 +98,7 @@ export async function run(argv: string[]) {
   let path = legacy ? target?.replaceAll('_', '.') : commandPath(command === 'validate' || command === 'example' ? positionals.slice(1) : positionals);
   if (legacy && !target) throw new Error('Specify an operation. Run o11 commands.');
   const discoveryPath = 'commands/' + encodeURIComponent(path!);
-  if (command === 'validate' && values.offline) { await emit(async () => { const result = validateInput(input, await cachedDiscovery(server.href, profile, discoveryPath)); if (!result.valid) process.exitCode = 2; return result; }); return; }
+  if (command === 'validate' && values.offline) { await emit(async () => { const descriptor = await cachedDiscovery(server.href, profile, discoveryPath); const result = validateInput(applyPinnedEnvironment(input, pinnedEnvironment, descriptor), descriptor); if (!result.valid) process.exitCode = 2; return result; }); return; }
   if (command === 'example' && values.offline) { await emit(async () => { const result = commandExample(await cachedDiscovery(server.href, profile, discoveryPath)); if (!result.valid) process.exitCode = 2; return result; }); return; }
   if (values.offline && (values.help || command === 'tools' && name === 'describe')) { await emit(async () => cachedDiscovery(server.href, profile, discoveryPath)); return; }
   if (values.offline && command !== 'commands' && command !== 'tools' && command !== 'docs') throw new Error('--offline supports cached help and discovery only.');
@@ -119,7 +120,7 @@ export async function run(argv: string[]) {
   }
   const api = new ApiClient(server, provider?.transportAuth(), token);
   if (command === 'completion') { if (positionals.length !== 2) throw new Error('Use o11 completion bash|zsh|fish [--live].'); await emit(async () => { const response = await api.request('commands'); await saveDiscovery(server.href, profile, 'commands', response); return completionScript(name!, Array.isArray(response.result) ? response.result.filter(object).map(row => String(row.command ?? '')) : []); }); return; }
-  if (command === 'validate') { await emit(async () => { const descriptor = await api.request(discoveryPath); await saveDiscovery(server.href, profile, discoveryPath, descriptor); const result = validateInput(input, descriptor); if (!result.valid) process.exitCode = 2; return result; }); return; }
+  if (command === 'validate') { await emit(async () => { const descriptor = await api.request(discoveryPath); await saveDiscovery(server.href, profile, discoveryPath, descriptor); const result = validateInput(applyPinnedEnvironment(input, pinnedEnvironment, descriptor), descriptor); if (!result.valid) process.exitCode = 2; return result; }); return; }
   if (command === 'example') { await emit(async () => { const descriptor = await api.request(discoveryPath); await saveDiscovery(server.href, profile, discoveryPath, descriptor); const result = commandExample(descriptor); if (!result.valid) process.exitCode = 2; return result; }); return; }
   if (command === 'batch') { await emit(async () => { const target = JSON.stringify({ server: server.href, profile }); const key = createHash('sha256').update(target + JSON.stringify(input)).digest('hex'); const result = await runBatch(input, api, { journal: values.journal ?? join(configRoot(), 'batches', `${key}.json`), target }); if (result.failed) process.exitCode = 2; return result; }); return; }
   const statusInput = () => { for (const key of Object.keys(input)) if (!['organizationId', 'routineId', 'environment'].includes(key)) throw new Error(`Unsupported setup field: ${key}.`); return input; };
@@ -146,6 +147,7 @@ export async function run(argv: string[]) {
           if (!/^[a-z][A-Za-z0-9]*(\.[a-z][A-Za-z0-9]*)+$/.test(progressPath)) throw new Error('--path requires a dotted operation path from command discovery.');
           const descriptor = await api.request('commands/' + encodeURIComponent(progressPath), undefined, { signal: controller.signal });
           if (payload(descriptor).mutation !== false) throw new Error('Polling requires a read-only procedure. Submit work separately and poll its progress.');
+          input = applyPinnedEnvironment(input, pinnedEnvironment, descriptor);
           if (!validateInput(input, descriptor).valid) throw new Error('Progress input does not match its command schema. Run o11 validate for field errors.');
         } else if (operation) { for (const key of Object.keys(input)) if (!['id', 'organizationId'].includes(key)) throw new Error(`Unsupported receipt wait field: ${key}.`); } else statusInput();
         const result = await waitFor(signal => progressPath ? api.request('execute/' + encodeURIComponent(progressPath), input, { signal }) : operation ? api.request('operations/' + encodeURIComponent(operation), typeof input.organizationId === 'string' ? { organizationId: input.organizationId } : undefined, { signal }) : api.request('status', input, { signal }), { signal: controller.signal, timeoutMs: positiveInteger(values.timeout, 300_000, 'timeout'), intervalMs: positiveInteger(values.interval, 2000, 'interval', 60_000), ...(command === 'watch' && !values['output-file'] ? { changed: (value: Record<string, unknown>) => process.stdout.write(JSON.stringify({ event: 'state', value }) + '\n') } : {}) });
@@ -182,15 +184,16 @@ export async function run(argv: string[]) {
   }
   if (command === 'call' && target === 'o11_read_artifact') path = 'artifacts/read';
   if (path === 'artifacts/read') { await emit(async () => api.request(path!, input, { mutation: false })); return; }
-  // An explicit write receipt already determines recovery semantics. Avoid making
-  // existing resumable writes depend on an additional discovery request.
-  if (!Object.keys(dynamic).length && typeof input._operationId === 'string') {
+  // Explicit receipt inputs need no additional discovery. An implicit environment
+  // pin needs the schema so strict commands shared across environments can omit it.
+  if (!Object.keys(dynamic).length && typeof input._operationId === 'string' && !pinnedEnvironment) {
     await emit(async () => api.request('execute/' + encodeURIComponent(path!), input, { mutation: true })); return;
   }
   await emit(async () => {
     const descriptor = await api.request(discoveryPath);
     await saveDiscovery(server.href, profile, discoveryPath, descriptor);
     input = applySchemaFlags(input, values, Object.keys(dynamic), descriptor);
+    input = applyPinnedEnvironment(input, pinnedEnvironment, descriptor);
     const mutation = payload(descriptor).mutation;
     return api.request('execute/' + encodeURIComponent(path!), input, { mutation: typeof mutation === 'boolean' ? mutation : undefined });
   });

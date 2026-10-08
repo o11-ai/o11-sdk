@@ -3,12 +3,13 @@ import { readFile, realpath } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { type ReleaseRequest, boundedBytes, parseCliRelease, type CliRelease } from '@o11/agent-kit/cli-release';
 import { version } from './version';
 import { updateStatus } from './release-version';
 import { installPinned } from './install';
 
-export async function bundleSha256(path = process.argv[1]): Promise<string> {
+export async function bundleSha256(path = fileURLToPath(import.meta.url)): Promise<string> {
   return createHash('sha256').update(await readFile(path)).digest('hex');
 }
 export async function availableUpdate(server: URL, request: ReleaseRequest = fetch) {
