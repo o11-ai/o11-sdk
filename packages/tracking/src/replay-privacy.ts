@@ -1,5 +1,7 @@
 import type { ReplayEvent } from './replay-contract';
 const safeAttributes = new Set(['class', 'type', 'role', 'disabled', 'checked', 'selected', 'hidden', 'open', 'width', 'height', 'style', 'rel', 'media', 'viewBox', 'd', 'fill', 'stroke', 'xmlns',
+  'x', 'y', 'x1', 'y1', 'x2', 'y2', 'cx', 'cy', 'r', 'rx', 'ry', 'points', 'transform', 'pathLength', 'preserveAspectRatio',
+  'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'stroke-dasharray', 'stroke-dashoffset', 'fill-rule', 'fill-opacity', 'stroke-opacity',
   '_cssText', 'rr_width', 'rr_height', 'rr_scrollTop', 'rr_scrollLeft']);
 const urlAttributes = new Set(['src', 'href', 'poster', 'action']);
 function privateCss(value: string) {

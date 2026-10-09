@@ -1,6 +1,6 @@
 {
   "name": "@o11/cli",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/o11-ai/o11-sdk.git",

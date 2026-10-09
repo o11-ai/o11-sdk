@@ -20,7 +20,7 @@ Inspect the routine's evidence needs, existing SDK initialization, recording set
 
 Native and PostHog-shared replay use the same authenticated o11 upload, storage, playback and reporting pipeline. Sharing is additive: Never disable or reconfigure a customer's PostHog recording as an incidental routine setup action. Do not call its init, set_config, startSessionRecording, stopSessionRecording, capture or flush methods from the o11 adapter. Preserve its consent, sampling, payloads, uploads, analytics, existing routines and historical evidence.
 
-Add replay when the user requests session monitoring or the routine needs recording evidence. An event-only routine does not require a recorder. Consent, allowed origins, sampling and retention still require the application's approved settings.
+Include replay in new SDK setup by default when the application has a browser client. Reuse an existing recorder and preserve an explicitly disabled recording setting. An event-only routine does not require an additional recorder. Consent, allowed origins, sampling and retention still require the application's approved settings.
 
 ## Authenticated o11 setup
 
@@ -28,7 +28,7 @@ Inspect signals_tracking_status and engagement_replay_readiness, including the s
 
 Create a same-origin authenticated application endpoint that derives customerId from the signed-in account and verifies the requesting origin. Rate-limit it. Call \`tracking.replaySession({ customerId, origin })\` on the server and return its result with Cache-Control: no-store. Keep the application tracking key in the server secret store. Never accept an arbitrary browser customerId or return the server key. The resulting token is limited to one recording, environment and origin for 30 minutes.
 
-Import createReplayClient from @o11/tracking/replay. Provide endpoint ending in /api/replay, a consent callback and a session callback that fetches the authenticated endpoint with same-origin credentials. Start after consent; stop on normal session end; reset on identity changes. Call revokeConsent immediately on withdrawal and retry unconfirmed deletion. Reset is not deletion. Capture settings are off by default, with 10% sampling and 30-day retention; do not silently change them.
+Import createReplayClient from @o11/tracking/replay. Provide endpoint ending in /api/replay, a consent callback and a session callback that fetches the authenticated endpoint with same-origin credentials. Start after consent; stop on normal session end; reset on identity changes. Call revokeConsent immediately on withdrawal and retry unconfirmed deletion. Reset is not deletion. New recording setup defaults to enabled, with 10% sampling and 30-day retention. Capture requires saved allowed origins, recording storage and browser consent. Preserve existing saved settings, including an explicit disabled choice.
 
 Inputs and text are masked by default. Canvas, media and iframes are blocked; console and network bodies are not collected. Add blockSelector for sensitive regions. approvedTextSelector permits only explicitly reviewed static text, never arbitrary customer content. Preserve consent, masking, origin restrictions and sampling.
 

@@ -6,25 +6,29 @@ import { replayTransport, type ReplayFetch } from './replay-transport';
 export type { PostHogReplayInstance } from './posthog-replay';
 export type { ReplaySession, ReplayStatus } from './replay-contract';
 export type ReplayOptions = { endpoint: string; session: () => Promise<ReplaySession>; consent: () => boolean;
-  posthog?: PostHogReplayInstance; blockSelector?: string; approvedTextSelector?: string; onStatus?: (status: ReplayStatus) => void; fetch?: ReplayFetch };
+  posthog?: PostHogReplayInstance; blockSelector?: string; approvedTextSelector?: string; onStatus?: (status: ReplayStatus) => void; onError?: (error: Error) => void; fetch?: ReplayFetch };
 
 export function createReplayClient(options: ReplayOptions) {
   const send = replayTransport(options.endpoint, options.fetch);
   let session: ReplaySession | undefined, consentSession: ReplaySession | undefined, buffer: ReplayBuffer | undefined, stopRecorder: (() => void) | undefined;
+  let cancellation: ReplaySession | undefined;
   let shared: ReturnType<typeof observePostHogReplay> | undefined;
   let releasePendingCapture = () => {};
   let timer: ReturnType<typeof setTimeout> | undefined, running = false, flushing: Promise<void> | undefined, generation = 0;
   let status: ReplayStatus = 'stopped', failures = 0, holdUntil = 0, incomplete = false;
   let expiresAtMonotonic = 0, captureAnchor = 0, serverAnchor = 0;
   const setStatus = (value: ReplayStatus) => { status = value; try { options.onStatus?.(value); } catch { /* Application callbacks never break capture. */ } };
+  const isStarting = () => status === 'starting';
+  const reportError = (cause: unknown) => { try { options.onError?.(cause instanceof Error ? cause : new Error('Recording failed.')); } catch { /* Isolate application callbacks. */ } };
   const permitted = () => { try { return options.consent(); } catch { return false; } };
   const halt = () => { running = false; releasePendingCapture(); releasePendingCapture = () => {}; shared?.cancel(); shared = undefined; stopRecorder?.(); stopRecorder = undefined; if (timer) clearTimeout(timer); timer = undefined;
     if (typeof window !== 'undefined') { window.removeEventListener('pagehide', pagehide); document.removeEventListener('visibilitychange', visibility); } };
   async function revokeConsent() {
     ++generation; halt(); buffer?.clear(); setStatus('stopped');
-    const target = session ?? consentSession;
+    const target = cancellation ?? session ?? consentSession;
     if (target) {
-      try { const result = await send('cancel', target.token, JSON.stringify({ recordingId: target.recordingId })); if (result.accepted) { session = undefined; consentSession = undefined; } return { deleted: result.accepted, retryable: !result.accepted && !result.terminal }; }
+      cancellation = target;
+      try { const result = await send('cancel', target.token, JSON.stringify({ recordingId: target.recordingId })); if ((result.accepted || result.terminal) && cancellation === target) { cancellation = undefined; if (session === target) session = undefined; if (result.accepted && consentSession === target) consentSession = undefined; } return { deleted: result.accepted, retryable: !result.accepted && !result.terminal }; }
       catch { return { deleted: false, retryable: true }; }
     }
     return { deleted: false, retryable: false };
@@ -40,10 +44,12 @@ export function createReplayClient(options: ReplayOptions) {
         const item = pending.peek()!;
         try {
           const result = await send('chunks', active.token, item.body, keepalive);
-          if (result.terminal) { halt(); pending.clear(); setStatus('failed'); return; }
+          if (active !== session || pending !== buffer) return;
+          if (!permitted()) { await revokeConsent(); return; }
+          if (result.terminal) { incomplete = true; halt(); pending.clear(); setStatus('failed'); return; }
           if (!result.accepted) { holdUntil = performance.now() + Math.max(result.retryAfterMs, Math.min(60_000, 1000 * 2 ** Math.min(++failures, 6))); return; }
           pending.acknowledge(); failures = 0;
-        } catch { holdUntil = performance.now() + Math.min(60_000, 1000 * 2 ** Math.min(++failures, 6)); return; }
+        } catch { if (active !== session || pending !== buffer || !permitted()) return; holdUntil = performance.now() + Math.min(60_000, 1000 * 2 ** Math.min(++failures, 6)); return; }
       }
     })().finally(() => { flushing = undefined; });
     return flushing;
@@ -66,8 +72,12 @@ export function createReplayClient(options: ReplayOptions) {
     }, REPLAY_LIMITS.flushMs);
   }
   async function start() {
-    if (running || status === 'starting') return;
+    if (running || isStarting()) return;
+    if (cancellation) await revokeConsent();
+    if (cancellation) { setStatus('paused'); return; }
     if (session) await stop();
+    if (running || isStarting()) return;
+    if (session) { setStatus('paused'); return; }
     if (buffer?.pending) { setStatus('paused'); return; }
     if (typeof window === 'undefined') throw new Error('Replay capture requires a browser.');
     if (!permitted()) { setStatus('stopped'); return; }
@@ -76,7 +86,7 @@ export function createReplayClient(options: ReplayOptions) {
     const captureReady = new Promise<void>(resolve => { releaseCapture = resolve; });
     releasePendingCapture = releaseCapture;
     try {
-      if (options.posthog && (options.blockSelector || options.approvedTextSelector)) throw new Error('Shared replay uses strict copy masking; selectors are native-only.');
+      if (options.posthog && (options.blockSelector || options.approvedTextSelector)) throw new Error('Shared replay uses PostHog masking; selectors are native-only.');
       if (options.blockSelector) document.querySelector(options.blockSelector);
       if (options.approvedTextSelector) document.querySelector(options.approvedTextSelector);
       const adapter = options.posthog ? await import('./posthog-replay') : undefined;
@@ -98,23 +108,24 @@ export function createReplayClient(options: ReplayOptions) {
             if (!buffer?.push(aligned)) throw new Error('Recording buffer full.');
             captured = true; if (status !== 'recording') setStatus('recording');
           },
-          failed() { captureFailed = true; incomplete = true; halt(); setStatus('failed'); },
+          failed(error) { if (current !== generation && (!captureId || session?.recordingId !== captureId || !running)) return; reportError(error); captureFailed = true; incomplete = true; halt(); setStatus('failed'); },
           gap() { missedCapture = true; incomplete = true; },
         });
       }
       const next = await options.session();
       const receivedAt = performance.now();
-      if (current !== generation || captureFailed) return;
-      if (!permitted()) { setStatus('stopped'); return; }
+      const cancelUnused = async () => { if (next.enabled && /^[0-9a-f-]{36}$/i.test(next.recordingId) && /^rpl_[a-f0-9]{64}$/.test(next.token)) { try { await send('cancel', next.token, JSON.stringify({ recordingId: next.recordingId })); } catch { /* Empty abandoned sessions expire on the server. */ } } };
+      if (current !== generation || captureFailed) { await cancelUnused(); return; }
+      if (!permitted()) { await cancelUnused(); if (current === generation) setStatus('stopped'); return; }
       if (!next.enabled) { setStatus('sampled-out'); return; }
       const anchor = Date.parse(next.serverTime ?? new Date().toISOString());
       if (!/^[0-9a-f-]{36}$/i.test(next.recordingId) || !/^rpl_[a-f0-9]{64}$/.test(next.token) || !Number.isFinite(anchor) || !Number.isFinite(Date.parse(next.expiresAt)) || Date.parse(next.expiresAt) <= anchor || !Number.isFinite(next.sampleRate) || next.sampleRate < 0 || next.sampleRate > 1) { setStatus('failed'); return; }
       const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(next.recordingId));
       const sample = new DataView(bytes).getUint32(0) / 0x1_0000_0000;
-      if (sample >= next.sampleRate) { setStatus('sampled-out'); return; }
+      if (sample >= next.sampleRate) { await cancelUnused(); if (current === generation) setStatus('sampled-out'); return; }
       const native = options.posthog ? undefined : await import('@rrweb/record');
-      if (current !== generation || captureFailed) return;
-      if (!permitted()) { setStatus('stopped'); return; }
+      if (current !== generation || captureFailed) { await cancelUnused(); return; }
+      if (!permitted()) { await cancelUnused(); if (current === generation) setStatus('stopped'); return; }
       session = next; captureId = next.recordingId; consentSession = next; incomplete = missedCapture; failures = 0; holdUntil = 0; buffer = new ReplayBuffer(next.recordingId, crypto.randomUUID()); running = true;
       serverAnchor = anchor; captureAnchor = receivedAt; expiresAtMonotonic = captureAnchor + Date.parse(next.expiresAt) - anchor;
       if (!options.posthog) stopRecorder = native!.record({ emit(event) {
@@ -132,19 +143,28 @@ export function createReplayClient(options: ReplayOptions) {
       if (!running) { stopRecorder?.(); stopRecorder = undefined; return; }
       window.addEventListener('pagehide', pagehide); document.addEventListener('visibilitychange', visibility);
       setStatus(options.posthog ? 'waiting-for-replay' : 'recording'); schedule();
-    } catch { halt(); setStatus('failed'); }
+    } catch (error) { if (current === generation) { reportError(error); halt(); setStatus('failed'); } }
     finally { releaseCapture(); if (!running && current === generation) { shared?.cancel(); shared = undefined; } }
   }
   async function stop() {
-    ++generation; shared?.unsubscribe(); if (!running) halt(); await shared?.drain();
-    halt(); if (typeof window === 'undefined') { setStatus('stopped'); return; } window.removeEventListener('pagehide', pagehide); document.removeEventListener('visibilitychange', visibility);
+    if (cancellation) { await revokeConsent(); return; }
+    const current = ++generation, observer = shared;
+    observer?.unsubscribe(); if (!running) halt(); await observer?.drain();
+    if (current !== generation) return;
+    halt(); if (typeof window === 'undefined') { setStatus('stopped'); return; }
     buffer?.seal();
     await flush();
-    if (session && buffer && !buffer.pending && permitted()) {
-      try { const result = await send('finish', session.token, JSON.stringify({ recordingId: session.recordingId, segments: buffer.inventory(), incomplete })); if (result.accepted || result.terminal) { buffer.clear(); session = undefined; } } catch { /* Retry finalization on the next stop/start; cron closes interrupted captures. */ }
+    if (current !== generation) return;
+    const active = session, pending = buffer;
+    if (active && pending && !pending.pending && permitted()) {
+      try {
+        const result = await send('finish', active.token, JSON.stringify({ recordingId: active.recordingId, segments: pending.inventory(), incomplete }));
+        if (current !== generation || active !== session || pending !== buffer) return;
+        if (result.accepted || result.terminal) { pending.clear(); session = undefined; }
+      } catch { /* Retry finalization on the next stop/start; cron closes interrupted captures. */ }
     }
-    setStatus('stopped');
+    if (current === generation && status !== 'failed') setStatus('stopped');
   }
-  return { start, stop, revokeConsent, flush: () => flush(), reset: async () => { await stop(); buffer?.clear(); session = undefined; consentSession = undefined; },
+  return { start, stop, revokeConsent, flush: () => flush(), reset: async () => { const current = generation; await stop(); if (generation !== current + 1 || cancellation) return; buffer?.clear(); session = undefined; consentSession = undefined; },
     get recordingId() { return session?.recordingId; }, get status() { return status; } };
 }

@@ -1,6 +1,6 @@
 import { REPLAY_LIMITS, type ReplayEvent } from './replay-contract';
-import { privateReplayEvent } from './replay-privacy';
-export const POSTHOG_REPLAY_TESTED_VERSIONS = ['1.335.2', '1.438.1'] as const;
+import { replayUrl } from './replay-privacy';
+export const POSTHOG_REPLAY_TESTED_VERSIONS = ['1.297.4', '1.335.2', '1.438.1', '1.438.3'] as const;
 export const object = (value: unknown): Record<string, unknown> => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid recording object.');
   return value as Record<string, unknown>;
@@ -29,51 +29,89 @@ export async function decodePostHogEvent(value: unknown): Promise<ReplayEvent> {
   }
   return { type: Number(raw.type), timestamp: Number(raw.timestamp), data: object(data) };
 }
-// Construct an allowlisted copy. Never mutate PostHog's payload. Plugin, canvas,
-// network, console, stylesheet and custom payloads are outside this surface.
+// PostHog owns DOM text/attribute masking. Preserve its rendering data, including
+// CSS, selectors and asset URLs, rather than applying native capture's policy a
+// second time. Only rrweb visual events cross this boundary; never plugins/logs.
+const visualFields: Record<number, readonly string[]> = {
+  1: ['positions'], 2: ['type', 'id', 'x', 'y', 'pointerType'], 3: ['id', 'x', 'y'], 4: ['width', 'height'],
+  5: ['id', 'text', 'isChecked', 'userTriggered'], 6: ['positions'],
+  7: ['type', 'id', 'currentTime', 'volume', 'muted', 'loop', 'playbackRate'],
+  8: ['id', 'styleId', 'adds', 'removes', 'replace', 'replaceSync'],
+  10: ['family', 'fontSource', 'buffer', 'descriptors'], 12: ['positions'],
+  13: ['id', 'styleId', 'index', 'set', 'remove'], 14: ['ranges'],
+  15: ['id', 'styles', 'styleIds'], 16: ['define'],
+};
+const pick = (raw: Record<string, unknown>, keys: readonly string[]) =>
+  Object.fromEntries(keys.filter(key => raw[key] !== undefined).map(key => [key, structuredClone(raw[key])]));
 export function posthogCopyPrivacy() {
-  const blocked = new Set<number>();
-  const remember = (raw: unknown, depth = 0) => {
-    if (depth > 100) throw new Error('Recording DOM too deep.');
-    const node = object(raw); if (typeof node.id === 'number') blocked.add(node.id);
-    if (blocked.size > 100_000) throw new Error('Blocked DOM state exceeds limit.');
-    if (Array.isArray(node.childNodes)) for (const child of node.childNodes) remember(child, depth + 1);
+  const blocked = new Set<number>(), parents = new Map<number, number>(), children = new Map<number, Set<number>>(), tags = new Map<number, string>();
+  const exclude = (id: number) => {
+    blocked.add(id);
+    const pending = [id];
+    for (let index = 0; index < pending.length; index++) for (const child of children.get(pending[index]!) ?? [])
+      if (!blocked.has(child)) { blocked.add(child); pending.push(child); }
   };
-  const nodeCopy = (raw: unknown, depth = 0): unknown => {
+  const attributesCopy = (raw: Record<string, unknown>, tag: string) => {
+    const attributes = Object.fromEntries(Object.entries(raw).filter(([key]) => !/^on/i.test(key) && key !== 'srcdoc' && !(tag === 'iframe' && key === 'src')));
+    // Never expose form values even when an upstream project disables masking.
+    if (['input', 'textarea'].includes(tag) && 'value' in attributes) attributes.value = '[masked]';
+    return attributes;
+  };
+  const nodeCopy = (raw: unknown, parent?: number, depth = 0): unknown => {
     if (depth > 100) throw new Error('Recording DOM too deep.');
-    const node = object(raw), attributes = node.attributes ? object(node.attributes) : {};
-    const excluded = 'data-o11-block' in attributes || ['canvas', 'video', 'audio', 'iframe', 'script', 'style'].includes(String(node.tagName)) || String(attributes.class ?? '').split(/\s+/).includes('rr-block');
-    if (excluded) { remember(node); return { type: 2, id: node.id, tagName: 'div', attributes: {}, childNodes: [] }; }
-    const clean: Record<string, unknown> = {};
-    for (const key of ['type', 'id', 'tagName', 'isSVG', 'isShadow', 'rootId', 'compatMode']) if (node[key] !== undefined) clean[key] = node[key];
-    if (node.type === 1) { clean.name = 'html'; clean.publicId = ''; clean.systemId = ''; }
-    if ('textContent' in node) clean.textContent = '[masked]';
-    // o11's attribute boundary is applied below, with styles omitted for shared
-    // recordings to exclude hidden CSS text and embedded data.
-    if (node.attributes) clean.attributes = Object.fromEntries(Object.entries(attributes).filter(([key]) => !['style', '_cssText'].includes(key)));
-    if (Array.isArray(node.childNodes)) clean.childNodes = node.childNodes.map(child => nodeCopy(child, depth + 1));
+    const node = object(raw), attributes = node.attributes ? object(node.attributes) : {}, id = Number(node.id);
+    const tag = String(node.tagName ?? '').toLowerCase();
+    if (parent !== undefined) {
+      const previous = parents.get(id); if (previous !== undefined && previous !== parent) children.get(previous)?.delete(id);
+      parents.set(id, parent); const siblings = children.get(parent) ?? new Set<number>(); siblings.add(id); children.set(parent, siblings);
+    }
+    tags.set(id, tag);
+    if (tags.size > 100_000) throw new Error('Recording DOM state exceeds limit.');
+    const excluded = blocked.has(id) || (parent !== undefined && blocked.has(parent)) || 'data-o11-block' in attributes || String(attributes.class ?? '').split(/\s+/).some(name => ['rr-block', 'ph-no-capture'].includes(name));
+    const clean = pick(node, ['type', 'id', 'name', 'publicId', 'systemId', 'tagName', 'isSVG', 'isCustom', 'needBlock', 'isShadow', 'isShadowHost', 'rootId', 'compatMode', 'textContent', 'isStyle']);
+    if (excluded) {
+      if (parent !== undefined && blocked.has(parent)) blocked.add(id); else exclude(id);
+      if (Array.isArray(node.childNodes)) for (const child of node.childNodes) nodeCopy(child, id, depth + 1);
+      return { type: 2, id, tagName: 'div', attributes: pick(attributes, ['class', 'rr_width', 'rr_height', 'width', 'height']), childNodes: [] };
+    }
+    if (tag === 'script') clean.tagName = 'noscript';
+    if (node.type === 3 && parent !== undefined && tags.get(parent) === 'textarea') clean.textContent = '[masked]';
+    if (node.attributes) clean.attributes = attributesCopy(attributes, tag);
+    if (Array.isArray(node.childNodes)) clean.childNodes = node.childNodes.map(child => nodeCopy(child, id, depth + 1));
     return clean;
   };
-  const numeric = (raw: Record<string, unknown>, keys: string[]) => Object.fromEntries(keys.filter(key => typeof raw[key] === 'number' || typeof raw[key] === 'boolean').map(key => [key, raw[key]]));
   return (event: ReplayEvent): ReplayEvent | null => {
     const raw = object(event.data); let data: Record<string, unknown>;
-    if (event.type === 2) { blocked.clear(); data = { node: nodeCopy(raw.node), initialOffset: numeric(object(raw.initialOffset), ['left', 'top']) }; }
-    else if (event.type === 4) data = { ...numeric(raw, ['width', 'height']), href: typeof raw.href === 'string' ? new URL(raw.href).origin : '' };
+    if (event.type === 2) {
+      blocked.clear(); parents.clear(); children.clear(); tags.clear();
+      data = { node: nodeCopy(raw.node), initialOffset: pick(object(raw.initialOffset), ['left', 'top']) };
+    } else if (event.type === 4) data = { ...pick(raw, ['width', 'height']), href: typeof raw.href === 'string' ? replayUrl(raw.href) : '' };
     else if (event.type === 0 || event.type === 1) data = {};
     else if (event.type === 3) {
       if (raw.source === 0) {
         const list = (key: string) => { if (!Array.isArray(raw[key])) throw new Error('Invalid recording mutation.'); return raw[key].map(object); };
-        data = { source: 0,
-          texts: list('texts').filter(item => !blocked.has(Number(item.id))).map(item => ({ id: item.id, value: '[masked]' })),
-          attributes: list('attributes').filter(item => !blocked.has(Number(item.id))).map(item => ({ id: item.id, attributes: Object.fromEntries(Object.entries(object(item.attributes)).filter(([key]) => !['style', '_cssText'].includes(key))) })),
-          removes: list('removes').filter(item => !blocked.has(Number(item.id))).map(item => numeric(item, ['parentId', 'id'])),
-          adds: list('adds').filter(item => !blocked.has(Number(item.parentId))).map(item => ({ ...numeric(item, ['parentId', 'nextId', 'previousId']), node: nodeCopy(item.node) })) };
-      } else if ([2, 3, 4, 5].includes(Number(raw.source))) {
-        if (blocked.has(Number(raw.id))) return null;
-        data = numeric(raw, ['source', 'type', 'id', 'x', 'y', 'width', 'height', 'isChecked']);
+        const attributes = list('attributes');
+        for (const item of attributes) {
+          const attrs = object(item.attributes);
+          if ('data-o11-block' in attrs || String(attrs.class ?? '').split(/\s+/).some(name => ['rr-block', 'ph-no-capture'].includes(name))) exclude(Number(item.id));
+        }
+        data = { source: 0, ...pick(raw, ['isAttachIframe']),
+          adds: list('adds').map(item => ({ parentId: item.parentId, ...pick(item, ['nextId', 'previousId']), node: nodeCopy(item.node, Number(item.parentId)) })).filter(item => !blocked.has(Number(item.parentId))),
+          texts: list('texts').filter(item => !blocked.has(Number(item.id))).map(item => ({ id: item.id, value: tags.get(parents.get(Number(item.id)) ?? -1) === 'textarea' ? '[masked]' : item.value })),
+          attributes: attributes.filter(item => !blocked.has(Number(item.id))).map(item => ({ id: item.id, attributes: attributesCopy(object(item.attributes), tags.get(Number(item.id)) ?? '') })),
+          // Keep removals so deleting a blocked placeholder still removes it.
+          removes: list('removes').map(item => pick(item, ['parentId', 'id', 'isShadow'])) };
+      } else {
+        const fields = visualFields[Number(raw.source)];
+        if (!fields || blocked.has(Number(raw.id))) return null;
+        data = { source: raw.source, ...pick(raw, fields) };
+        if ([1, 6, 12].includes(Number(raw.source)) && Array.isArray(data.positions))
+          data.positions = data.positions.map(object).filter(position => !blocked.has(Number(position.id)));
+        if (raw.source === 14 && Array.isArray(data.ranges))
+          data.ranges = data.ranges.map(object).filter(range => !blocked.has(Number(range.start)) && !blocked.has(Number(range.end)));
         if (raw.source === 5) data.text = '[masked]';
-      } else return null;
+      }
     } else return null;
-    return privateReplayEvent({ type: event.type, timestamp: event.timestamp, data });
+    return { type: event.type, timestamp: event.timestamp, data };
   };
 }

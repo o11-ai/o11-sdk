@@ -1,12 +1,13 @@
 import { REPLAY_LIMITS, type ReplayEvent, type ReplayCaptureSource } from './replay-contract';
 import { decodePostHogEvent, object, posthogCopyPrivacy } from './posthog-replay-data';
 export type PostHogReplayInstance = { on(event: 'eventCaptured', callback: (capture: unknown) => void): () => void };
-export type PostHogReplaySink = { event(event: ReplayEvent, source: ReplayCaptureSource, boundary: boolean): void | Promise<void>; failed(): void; gap?(): void };
+export type PostHogReplaySink = { event(event: ReplayEvent, source: ReplayCaptureSource, boundary: boolean): void | Promise<void>; failed(error: Error): void; gap?(): void };
 export function observePostHogReplay(instance: PostHogReplayInstance, sink: PostHogReplaySink) {
   let active = true, bytes = 0, stream = '', ready = false;
   let privacy = posthogCopyPrivacy(), pending = Promise.resolve();
   const seen = new Set<string>();
-  const fail = () => { if (active) { active = false; try { sink.failed(); } catch { /* Isolate all application callbacks. */ } } };
+  let metadata: ReplayEvent | null = null;
+  const fail = (cause: unknown = new Error('Recording copy exceeds supported limits.')) => { if (active) { active = false; try { sink.failed(cause instanceof Error ? cause : new Error('Could not copy recording.')); } catch { /* Isolate all application callbacks. */ } } };
   const unsubscribe = instance.on('eventCaptured', capture => {
     // This hook executes before PostHog uploads. Nothing may escape it, including
     // serialization, compression, getters and application callbacks.
@@ -28,17 +29,22 @@ export function observePostHogReplay(instance: PostHogReplayInstance, sink: Post
       pending = pending.then(async () => {
         if (!active) return;
         const key = `${source.sessionId}:${source.windowId}`;
-        if (key !== stream) { stream = key; ready = false; privacy = posthogCopyPrivacy(); }
+        if (key !== stream) { stream = key; ready = false; privacy = posthogCopyPrivacy(); metadata = null; }
         for (const value of properties.$snapshot_data as unknown[]) {
           const decoded = await decodePostHogEvent(value);
           if (!active) return;
-          const boundary = !ready;
-          if (!ready && decoded.type !== 2) { if (decoded.type === 3) sink.gap?.(); continue; } // late attachment waits for a real full snapshot
+          let boundary = !ready;
+          if (!ready && decoded.type !== 2) {
+            if (decoded.type === 4) metadata = privacy(decoded);
+            if (decoded.type === 3) sink.gap?.();
+            continue;
+          } // late attachment waits for a real full snapshot
           const event = privacy(decoded); if (!event) continue;
+          if (boundary && metadata) { await sink.event(metadata, source, true); metadata = null; boundary = false; }
           ready = true; await sink.event(event, source, boundary);
         }
       }).catch(fail).finally(() => { bytes -= size; });
-    } catch { fail(); }
+    } catch (error) { fail(error); }
   });
   return {
     unsubscribe: () => { try { unsubscribe(); } catch { /* PostHog remains independent. */ } },

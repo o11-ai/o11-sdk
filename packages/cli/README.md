@@ -51,6 +51,8 @@ use this fixed release together: older releases do not participate in the lock.
 
 Run `o11 setup plan --routine-id ID` to inspect current blockers and the next setup steps. `o11 setup apply --routine-id ID` applies available signal validation and monitoring configuration actions with server checks that prevent customer contact. Each action uses a persisted operation ID; `setup resume` uses the same journal after interruption. Imports that could trigger other routines remain explicit actions. The journal records receipt IDs and input hashes, without prompts or credentials. A changed revision is read back after every action. Setup apply exits 2 until the current routine has verified execution evidence.
 
+Read `o11 docs setup-repairs` for the CLI actions behind signal, capture, contact, import and delivery setup controls. The plan includes `workflow.repairs` with commands, known inputs, missing fields and scopes. `o11 organization setup-options --json` checks effective analysis entitlements and exposes administrator links and missing messaging runtime settings. `o11 customers verify-email` lets an authorized workspace administrator record actual ownership confirmation; purpose permission remains a separate recorded requirement.
+
 Use `o11 check --routine-id ID` in CI. A saved definition, enabled schedule, or old execution does not pass this check. `--require-capability replayMonitoring` and `--max-lag-seconds 3600` add health assertions. `--check` also works on ordinary commands and fails on invalid results or failed/deferred import outcomes. Exit 1 means a command or transport error; exit 2 means the requested check did not pass.
 
 `o11 wait --routine-id ID --timeout 300000 --interval 2000` waits for verified execution. `o11 wait --id UUID` watches an operation receipt. For durable analysis jobs, use the returned progress path with `o11 wait --path research.selectedProgress --input progress-input.json`; the CLI verifies that the procedure is read-only before polling. `watch` accepts the same arguments and emits one JSON object per line when state changes. Ctrl-C stops local waiting; remote work continues.
@@ -76,6 +78,19 @@ Use `o11 check --routine-id ID` in CI. A saved definition, enabled schedule, or 
 `o11 research runtime-check --input probe.json --operation-id UUID` probes deployed database columns and a temporary storage object, including cleanup. The input selects `organizationId`, `environment`, and `connectorId`. This requires configuration permission and an administrator role. Queue delivery and provider access stay unknown until actual execution supplies evidence.
 
 `o11 research analyze-selected-only --input request.json --operation-id UUID` submits recording analysis without customer contact or owner previews. Supply a stable `requestId`, source context, `sessionIds`, and `routineIds`. Poll the returned progress call. Configuration and read permissions are sufficient; source access, billing, and worker prerequisites still apply.
+
+## Check and connect email channels
+
+Run `o11 channels setup-options --persona-id PERSONA_ID --environment production --json` to check a persona’s sender, Gmail/Microsoft availability, Cloudflare connection, pending approvals, setup links, and server requirements. This read-only command works without a routine. Reuse the saved sender when it is ready; offer the returned provider setup action when it is missing.
+
+```sh
+o11 personas list --json
+o11 channels setup-options --persona-id PERSONA_ID --environment production --json
+o11 docs channels
+o11 docs channels --live
+```
+
+The `channels` guide covers Gmail and Microsoft authorization, Cloudflare consent and callback, domain provisioning, manual DNS setup, required scopes, operation IDs, expiry and retries, and verification after approval. Agents should create the selected provider’s exact authorization link and resume setup in the same chat. Browser consent supplies the mailbox identity; ask for an address only when domain setup requires an unused sender address.
 
 ## Inbox, replies, delegation, and email branding
 
@@ -111,7 +126,6 @@ These features use the same saved records through the app and CLI. Run a command
 | Inspect, save, or publish domain branding | `o11 channels identity branding get`, `o11 channels identity branding save`, `o11 channels identity branding publish` |
 | Read or change the sender name and private photo | `o11 channels identity get`, `o11 channels identity save` |
 | Select and inspect recordings | `o11 research sessions`, `o11 research recording-detail`, `o11 research artifact` |
-| Configure and verify Postgres conversation ingestion | `o11 database conversations status`, `get`, `preview`, `configure`, `sync` |
 
 Use `--input FILE` for nested settings, webhook URLs, or PEM contents. Certificate upload takes the public PEM chain in `pem`. SES branding uses the certificate’s certified logo. Private keys are rejected. Upload and DNS publication require administrator access. A saved certificate does not establish inbox-provider trust.
 
@@ -123,7 +137,7 @@ Reply speed uses `delayMode`, `minDelaySeconds`, `maxDelaySeconds`, and `delaySe
 
 Handoff drafts use `o11 inbox suggest-reply` with `previewOnly: true`; the handoff keeps automatic sending paused. Send the reviewed reply with `o11 inbox send-reply` and confirm its sent status through `o11 inbox history`. Then `o11 replies delegations finish-reply` takes `taskId`, `taskRevision`, `conversationId`, `conversationRevision`, `threadId`, `inboundMessageId`, and the sent `messageId`, plus `resume` and optional `remember`. It refuses unsent replies, stale state, a different sender, or a new customer message. Account preference commands read or set `preference` to `ask`, `resume`, or `keep_paused`. Terminal clients can read that preference before making the explicit finish call. Read `finish-reply-context` before resuming; it returns the original sender and saved contact addresses. An identity handoff requires explicit `verifySender: true` when verification is allowed. Confirming a recognized alternate email address records that exact customer/contact/address pair for later messages. Retired contacts, changed addresses, other senders, and other review reasons still require their own checks. This does not change the saved reply destination.
 
-For a new Gmail or OAuth-based source connection, run `o11 status --json` and open `result.links.integrations` to authorize the provider in your browser. OAuth state belongs to that browser session; the terminal cannot grant provider consent. After authorization, use the mailbox/account commands above and save the chosen IDs in the chat, persona, or routine settings. Credential-based source connections use `o11 knowledge connect` directly.
+For Gmail, Microsoft email, or Cloudflare domain email, start with `o11 channels setup-options` and read `o11 docs channels`. For other OAuth sources, inspect the provider’s live setup commands and `result.links.integrations` from `o11 status --json`. Credential-based source connections use `o11 knowledge connect` directly.
 
 Chat access updates take `id`, current `revision`, `scope: "conversation"`, and a complete `agent` object or `agent: null` to reset. Read the current agent first and preserve its remaining fields. Configure `websiteAccessMode` as `selected` or `all`, `websiteUrls`, `blockedWebsiteUrls`, `sourceAccess`, `contextBank`, and `gmailHistoryMailboxes`. All-sites mode allows public HTTPS websites; blocked domains include subdomains and blocked paths include descendants. Source and mailbox selections must belong to this workspace and environment. Updates require an administrator, invalidate stale drafts, and can restart a pending automatic reply under its existing delivery checks. The app configures the whole chat. The API also retains `scope: "next_reply"` for existing clients; it targets only the latest unanswered inbound message.
 

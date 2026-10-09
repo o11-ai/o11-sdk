@@ -85,13 +85,13 @@ Use o11 <command> --help for its fields and required input.
 --input FILE|- reads a JSON object. --set field=JSON supplies other fields.
 --set-file field=PATH reads a secret from a private file without shell argument exposure.
 --output-file FILE saves results privately without printing their contents.
+--reauth explicitly starts a fresh login; ordinary login reuses saved access.
 --check fails on invalid, blocked, deferred, or unverified results.
 --require-capability NAME and --max-lag-seconds N add health assertions.
 wait/watch use --timeout MS (default 300000) and --interval MS (default 2000).
 setup apply/resume use --journal FILE and --max-steps N (default 20).
 --expect-organization ID and --expect-environment test|production pin request context.
 Use --help --offline for previously cached command schemas. Cached permissions may be stale.
---reauth explicitly starts a fresh login; ordinary login reuses saved access.
 --profile NAME separates credentials. --no-browser supports remote sign-in.
 --credential-store file explicitly selects private files instead of the OS keyring.
 Complete a waiting remote login with o11 login --input FILE|-.
