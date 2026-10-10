@@ -22,9 +22,17 @@ Native and PostHog-shared replay use the same authenticated o11 upload, storage,
 
 Include replay in new SDK setup by default when the application has a browser client. Reuse an existing recorder and preserve an explicitly disabled recording setting. An event-only routine does not require an additional recorder. Consent, allowed origins, sampling and retention still require the application's approved settings.
 
+## Add recordings after events
+
+In Integrations → o11 SDK → your application → Recordings, select the environment and copy the recording setup prompt. The prompt from signals.tracking.setupPrompt with recordingsOnly: true adds or repairs the browser recorder and authenticated replay-session endpoint on the existing source. Reuse its working environment key, event handlers and durable delivery. Do not re-register the event manifest or instrument unrelated business events. Saved recording choices, including disabled recording, still apply.
+
 ## Authenticated o11 setup
 
-Inspect signals_tracking_status and engagement_replay_readiness, including the selected application/environment and received evidence. Recording settings (allowed origins, sampling and retention) are inspected by the human in Application tracking. Recording settings require human review in Application tracking; prepare authorized code and give the exact remaining setting when human approval is needed. Source registration or an SDK installation alone does not prove recording readiness.
+Inspect signals_tracking_status, signals.tracking.replay.status and engagement_replay_readiness for the selected application/environment. Recording status returns detectedOrigins and lastRecordingAt. An enabled setting does not prove that browser code is deployed or recording data has arrived. Prepare authorized code and report the remaining action; verify a received recording and playback before claiming capture works.
+
+Discover exact browser application origins from deployment configuration for the selected environment. Submit verified origins through signals.tracking.registerOrigins with organizationId, projectId, environment and origins; read the live schema first. This updates discovery metadata without re-registering events or allowing capture. Production discovery excludes localhost and preview/test domains. Do not substitute the o11 dashboard/API origin, unrelated applications or arbitrary request Origin headers. Detection stays within the workspace, application and environment. If deployment configuration cannot establish an origin, leave manual domain entry available and report the missing evidence.
+
+Recordings shows detected domains for human review. The authenticated replay-session call also records its server-verified origin as a suggestion, even when capture is disabled. Detected domains never enable recording or change saved allowed origins. Humans review and save allowed origins, sampling and retention in Recordings; preserve existing saved settings and opt-outs.
 
 Create a same-origin authenticated application endpoint that derives customerId from the signed-in account and verifies the requesting origin. Rate-limit it. Call \`tracking.replaySession({ customerId, origin })\` on the server and return its result with Cache-Control: no-store. Keep the application tracking key in the server secret store. Never accept an arbitrary browser customerId or return the server key. The resulting token is limited to one recording, environment and origin for 30 minutes.
 

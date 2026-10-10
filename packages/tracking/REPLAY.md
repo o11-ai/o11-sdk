@@ -33,10 +33,16 @@ Server-only o11 business events remain separate and must follow committed operat
 
 ## Install
 
-1. In Integrations → o11 SDK → your application → Recordings, save exact application origins, sample percentage and retention for the application/environment. New recording setup defaults to enabled, with 10% sampling and 30 days retention. Capture starts only after settings are saved, recording storage is available and browser consent is granted. Existing saved settings, including disabled recording, are preserved.
+1. In Integrations → o11 SDK → your application → Recordings, select the environment and copy the recording setup prompt into your coding agent. It connects the browser recorder and authenticated replay-session endpoint on the existing application source and environment key. Existing events, manifests, handlers and durable delivery stay in place. Use the recording prompt when adding recordings after event setup; you do not need to repeat SDK event setup.
 2. Keep the application tracking key on your server. Add an authenticated, same-origin application endpoint that derives the customer ID from the authenticated session and verifies the requesting origin. Rate-limit that application endpoint; never accept an arbitrary customer ID from the browser.
 3. Return the result of `tracking.replaySession` from that endpoint. The returned bearer token grants only capture for that recording, environment and origin, for 30 minutes. It cannot submit business events, edit profiles or grant contact permission.
 4. Load the browser entry after consent. The rrweb bundle loads only for selected sessions.
+
+The coding agent discovers exact browser origins from the selected environment's deployment configuration and submits them through `signals.tracking.registerOrigins` with `organizationId`, `projectId`, `environment` and `origins`. Read the live schema first. This stores domain suggestions independently of the event manifest. Production discovery excludes localhost and preview/test domains. Do not use the o11 dashboard/API origin, unrelated deployments or arbitrary request `Origin` headers. If the deployment configuration cannot establish the domain, manual entry remains available.
+
+Review detected domains in Recordings and save the allowed origins, sample percentage and retention. The authenticated `tracking.replaySession` call also records its server-verified origin as a suggestion, even when capture is disabled. Detection stays within the workspace, application and environment; it never enables recording or adds capture permission. New recording setup defaults to enabled, with 10% sampling and 30 days retention. Capture starts only after settings are saved, recording storage is available and browser consent is granted. Preserve existing saved settings, including disabled recording.
+
+Recording status (`signals.tracking.replay.status`) includes `detectedOrigins` and `lastRecordingAt`. An enabled toggle confirms the saved setting. Verify a real consented session is received and playable in the selected environment before reporting that recording works. If there is no recording, check browser deployment, consent, sampling, allowed origins and storage; give the user the remaining action in Recordings or the running application.
 
 Server example (inside your existing authenticated endpoint):
 
