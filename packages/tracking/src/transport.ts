@@ -1,7 +1,8 @@
-export type TrackingReceipt = { accepted: boolean; retryable: boolean; status?: number; receiptId?: string; code?: string; retryAfterMs?: number };
+import { sdkVersion } from './version';
+export type TrackingReceipt = { accepted: boolean; retryable: boolean; status?: number; receiptId?: string; code?: string; retryAfterMs?: number; sdkVersion?: string };
 export type TrackingFetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 export type TrackingOptions = { endpoint: string; key: string; environment?: 'test' | 'production'; fetch?: TrackingFetch; timeoutMs?: number; attempts?: number };
-export type ReceiptStatus = { id: string; kind: string; status: 'queued' | 'processed' | 'rejected'; code: string | null; processedAt: string | null };
+export type ReceiptStatus = { id: string; kind: string; status: 'queued' | 'processed' | 'rejected'; code: string | null; processedAt: string | null; sdkVersion?: string | null };
 
 export function retryAfterMs(value: string | null, now = Date.now()) {
   if (!value) return undefined;
@@ -34,7 +35,7 @@ export function trackingTransport(options: TrackingOptions) {
   if (['development', 'test'].includes(runtimeEnvironment ?? '') && environment === 'production') throw new Error('Use a development tracking key and environment: test outside production.');
   const attempts = Math.max(1, Math.min(3, Math.floor(options.attempts ?? 3)));
   const timeoutMs = Math.max(100, Math.min(10000, options.timeoutMs ?? 3000)), send = options.fetch ?? fetch;
-  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${options.key}`, 'X-O11-Environment': environment };
+  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${options.key}`, 'X-O11-Environment': environment, 'X-O11-SDK-Version': sdkVersion };
   const url = (kind: string) => kind === 'events' ? endpoint : new URL(`./${kind}`, endpoint);
   return {
     async post(kind: string, value: unknown): Promise<TrackingReceipt> {
@@ -50,7 +51,7 @@ export function trackingTransport(options: TrackingOptions) {
             return { accepted: false, retryable: false, status, code: 'redirect_rejected' };
           }
           const data = await boundedJson(response);
-          if (response.ok) return data?.accepted === true && typeof data.receiptId === 'string' ? { accepted: true, retryable: false, status, receiptId: data.receiptId } : { accepted: false, retryable: true, status, code: 'invalid_response' };
+          if (response.ok) return data?.accepted === true && typeof data.receiptId === 'string' ? { accepted: true, retryable: false, status, receiptId: data.receiptId, ...(typeof data.sdkVersion === 'string' ? { sdkVersion: data.sdkVersion } : {}) } : { accepted: false, retryable: true, status, code: 'invalid_response' };
           const code = typeof data?.code === 'string' ? data.code : 'request_rejected';
           if (status < 500 && status !== 429 && status !== 408) return { accepted: false, retryable: false, status, code };
           // Long provider holds belong in the caller's durable outbox, not a sleeping request.
@@ -66,7 +67,7 @@ export function trackingTransport(options: TrackingOptions) {
       if (response.status >= 300 && response.status < 400) { await response.body?.cancel(); return null; }
       const data = await boundedJson(response);
       if (!response.ok || !data || data.id !== id || !['queued', 'processed', 'rejected'].includes(String(data.status))) return null;
-      return { id, kind: String(data.kind), status: data.status as ReceiptStatus['status'], code: typeof data.code === 'string' ? data.code : null, processedAt: typeof data.processedAt === 'string' ? data.processedAt : null };
+      return { id, kind: String(data.kind), status: data.status as ReceiptStatus['status'], code: typeof data.code === 'string' ? data.code : null, processedAt: typeof data.processedAt === 'string' ? data.processedAt : null, sdkVersion: typeof data.sdkVersion === 'string' ? data.sdkVersion : null };
     },
   };
 }

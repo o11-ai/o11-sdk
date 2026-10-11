@@ -1,6 +1,6 @@
 import { setupConnectionContext, setupConnectionCheck } from './setup-connection';
 import { setupDecisions } from './setup-decisions';
-import { agentKitVersion, cliVersion } from './versions';
+import { agentKitVersion, cliVersion, docsVersion, instructionsVersion, releaseId } from './versions';
 import type { SetupRequest, SetupEvidence } from './setup-workflow-guide';
 export { setupConnectionContext, setupConnectionCheck, type SetupConnection } from './setup-connection';
 export { agentKitVersion, cliVersion } from './versions';
@@ -23,6 +23,7 @@ export function setupPrompt(input: SetupRequest): string {
     `Setup guide: ${new URL(`/api/agent-docs/${guide}`, server).href}`,
     `CLI profile: ${profile} (shared by all routines in this workspace)`,
     `CLI version: ${cliVersion}; Tracking SDK version: ${agentKitVersion} (copied hints, not compatibility gates)`,
+    `Release: ${releaseId}; instructions: ${instructionsVersion}; guides: ${docsVersion}`,
   ].filter(Boolean).join('\n');
   return `${input.trackingOnly ? 'Configure only missing o11 tracking in this application repository. Do not create, edit or activate a routine.' : 'Configure my o11 routine and any confirmed missing tracking in this application repository.'}
 
@@ -31,7 +32,7 @@ ${context}
 Keep setup in this chat. Read AGENTS.md first. Complete permitted discovery, repairs, configuration, validation and saving.
 ${setupConnectionCheck}
 Use the o11 CLI first: o11 status --server ${server} --profile ${profile} --json${input.routineId && !input.trackingOnly ? ` --routine-id ${input.routineId}` : ''}. If that profile fails, check the existing default profile with o11 status --server ${server} --json. Keep the verified profile on every authenticated command. Reuse a working CLI or MCP connection; do not log out or require another login for each routine.
-Use a verified @o11/cli executable; preserve unrelated tools. Verify current cli-install checksums and try updating with o11 update before giving up on a missing command or version disagreement. Use the returned installation.command, preserve credentials, refresh live docs and schemas, and retry. Never downgrade a newer working CLI. For confirmed SDK incompatibility, update @o11/tracking with the repository’s permitted package manager and run checks. Copied versions are hints. Preserve unrelated analytics SDKs. Continue independent work if recovery fails; report the attempted repair and next action.
+Use a verified @o11/cli executable; try updating with o11 update before giving up on version failures. Use the returned installation.command; preserve credentials. Never downgrade a newer working CLI. Read live upgrades and changelog guides and /api/agent-docs/release; run o11 upgrade plan in this app. Prefer a verified newer SDK when straightforward; preserve custom code and shared routines. For a difficult upgrade, keep working capture and save the reason, owner, next action and review date within 30 days. Continue independent work if recovery fails.
 Read o11 docs ${guide} --live --json (or fetch the Setup guide URL); then read only the tracking, history, replay or delivery procedures needed. ${input.trackingOnly ? 'Inspect the selected source and current tracking configuration.' : 'Use o11 setup plan with the returned or saved routine ID for live preflight and saved choices.'} Inspect live --help and use --input FILE for nested configuration; do not reconstruct schemas from source when discovery works. If setup plan is unavailable, update and retry, then use verified status and routine checks to continue. A permission refusal or uncertain write cannot be bypassed by switching clients.
 ${input.trackingOnly ? 'Do not ask delivery questions. Confirm only unresolved tracking semantics; continue independent work. Ask required questions once in ordinary chat at the end of the turn, without a question tool.' : setupDecisions}
 ${input.setupReport && !input.trackingOnly ? 'Saved setup evidence exists. Read the current report and live preflight; preserve completed work and resume unresolved dependencies rather than restarting.' : ''}

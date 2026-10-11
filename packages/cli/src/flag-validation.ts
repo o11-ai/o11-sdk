@@ -11,6 +11,7 @@ const allowed: Record<string, string[]> = {
   validate: [...input, 'offline', 'id', 'name', 'revision', 'routine-id', 'source-id', 'operation-id'], batch: [...input, 'journal'],
   diagnostics: setup,
   install: ['input'],
+  upgrade: input,
   benchmark: ['input', 'set'], example: ['offline'],
 };
 export function validateFlags(command: string, values: Record<string, unknown>) {

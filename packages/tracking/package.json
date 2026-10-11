@@ -1,6 +1,6 @@
 {
   "name": "@o11/tracking",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "type": "module",
   "repository": {
     "type": "git",
@@ -30,6 +30,8 @@
     "dist",
     "src",
     "README.md",
+    "CHANGELOG.md",
+    "UPGRADING.md",
     "REPLAY.md",
     "LICENSE"
   ],

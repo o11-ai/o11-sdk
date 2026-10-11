@@ -79,6 +79,8 @@ Use `o11 check --routine-id ID` in CI. A saved definition, enabled schedule, or 
 
 `o11 research analyze-selected-only --input request.json --operation-id UUID` submits recording analysis without customer contact or owner previews. Supply a stable `requestId`, source context, `sessionIds`, and `routineIds`. Poll the returned progress call. Configuration and read permissions are sufficient; source access, billing, and worker prerequisites still apply.
 
+Read [upgrade guidance](https://docs.o11.ai/upgrades/) and [release notes](https://docs.o11.ai/changelog/). Run `o11 upgrade plan --input FILE --json` in the selected application to inspect its installed SDK and the service's verified release without changing files. Prefer safe updates; preserve custom code and record temporary exceptions. Installed packages and running capture are verified separately.
+
 ## Check and connect email channels
 
 Run `o11 channels setup-options --persona-id PERSONA_ID --environment production --json` to check a persona’s sender, Gmail/Microsoft availability, Cloudflare connection, pending approvals, setup links, and server requirements. This read-only command works without a routine. Reuse the saved sender when it is ready; offer the returned provider setup action when it is missing.

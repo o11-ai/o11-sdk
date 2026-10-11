@@ -50,6 +50,7 @@ export function render(value: unknown, json: boolean): string {
 export const help = `o11 — configure your workspace from the terminal
 
   o11 login --server https://YOUR_API       Sign in once; reuse saved access
+  o11 upgrade plan --input FILE            Inspect an app and plan a verified upgrade; no changes
   o11 status [--routine-id ID]             Inspect workspace or saved routine setup
   o11 check --routine-id ID                Require verified current execution (exit 2 otherwise)
   o11 setup plan --routine-id ID           Inspect steps and blockers

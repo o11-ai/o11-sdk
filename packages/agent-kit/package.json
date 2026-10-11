@@ -1,17 +1,22 @@
 {
   "name": "@o11/agent-kit",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "type": "module",
   "exports": {
     "./prompt": "./src/prompt.ts",
     "./docs": "./src/docs.ts",
     "./commands": "./src/commands.ts",
-    "./cli-release": "./src/cli-release.ts"
+    "./cli-release": "./src/cli-release.ts",
+    "./sdk-release": "./src/sdk-release.ts",
+    "./upgrade-policy": "./src/upgrade-policy.ts",
+    "./setup-record": "./src/setup-record.ts",
+    "./versions": "./src/versions.ts"
   },
   "scripts": {
     "check-types": "bun ../../scripts/typecheck.mjs tsconfig.json"
   },
+  "dependencies": { "zod": "4.6.5" },
   "devDependencies": {
     "@types/bun": "1.4.2"
   }

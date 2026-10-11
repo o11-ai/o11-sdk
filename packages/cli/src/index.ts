@@ -25,6 +25,7 @@ import { diagnosticBundle } from './diagnostics';
 import { payload } from './health';
 import { commandExample } from './examples';
 import { parseCommandArgs, applySchemaFlags, applyPinnedEnvironment } from './schema-flags';
+import { releaseId, docsVersion, instructionsVersion } from '@o11/agent-kit/versions';
 
 export async function run(argv: string[]) {
   const { values, positionals, dynamic } = parseCommandArgs(argv);
@@ -44,7 +45,7 @@ export async function run(argv: string[]) {
   if (values.version) { await emit(async () => ({ version, bundleSha256: await bundleSha256() })); return; }
   if (!command) { await emit(async () => json ? { help } : help); return; }
   validateFlags(command, values);
-  const local = ['login', 'logout', 'mcp', 'docs', 'operation-id', 'status', 'commands', 'setup', 'check', 'wait', 'watch', 'profiles', 'completion', 'verify', 'validate', 'batch', 'diagnostics', 'install', 'benchmark', 'example', 'update'];
+  const local = ['login', 'logout', 'mcp', 'docs', 'operation-id', 'status', 'commands', 'setup', 'check', 'wait', 'watch', 'profiles', 'completion', 'verify', 'validate', 'batch', 'diagnostics', 'install', 'benchmark', 'example', 'update', 'upgrade'];
   if (values.help && (local.includes(command) || command === 'operations')) { await emit(async () => ({ help })); return; }
   if (command === 'operation-id') { if (positionals.length !== 1) throw new Error('Use o11 operation-id.'); await emit(async () => ({ id: crypto.randomUUID() })); return; }
   if (command === 'completion' && !values.live) {
@@ -61,7 +62,8 @@ export async function run(argv: string[]) {
     const doc = name ? readDoc(name) : undefined;
     if (name && !doc) throw new Error('Unknown documentation page. Run o11 docs.');
     const search = values.search?.toLowerCase();
-    await emit(async () => doc ?? agentDocs.filter(doc => !search || JSON.stringify(doc).toLowerCase().includes(search)).map(({ markdown: _, ...doc }) => doc)); return;
+    const snapshot = { releaseId, docsVersion, instructionsVersion, bundled: true };
+    await emit(async () => doc ? { ...doc, ...snapshot } : agentDocs.filter(doc => !search || JSON.stringify(doc).toLowerCase().includes(search)).map(({ markdown: _, ...doc }) => ({ ...doc, ...snapshot }))); return;
   }
   if (command === 'login' && values.input !== undefined) {
     if (name || values.scope !== undefined || values.server !== undefined || values['no-browser'] || values.reauth || values['credential-store'] !== undefined) throw new Error('Use login --input FILE|- by itself to complete the waiting login.');
@@ -86,6 +88,11 @@ export async function run(argv: string[]) {
   const pinnedEnvironment = input.environment === undefined && !!(values['expect-environment'] ?? pins.environment);
   input = pinnedInput(input, { organizationId: values['expect-organization'] ?? pins.organizationId, environment: values['expect-environment'] ?? pins.environment });
   const server = await loadServer(profile, values.server);
+  if (command === 'upgrade') {
+    if (name !== 'plan' || positionals.length !== 2) throw new Error('Use o11 upgrade plan --input FILE.');
+    const { upgradePlan } = await import('./upgrade');
+    await emit(async () => upgradePlan(input, server), false); return;
+  }
   if (command === 'update') {
     if (positionals.length !== 1) throw new Error('Use o11 update [--check].');
     const release = await availableUpdate(server);

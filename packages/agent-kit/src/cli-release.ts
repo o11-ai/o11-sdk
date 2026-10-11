@@ -14,12 +14,13 @@ export function parseCliRelease(value: unknown): CliRelease {
     || typeof data.bundleSha256 !== 'string' || !/^[a-f0-9]{64}$/.test(data.bundleSha256)) throw new Error('Invalid CLI release metadata.');
   return { package: '@o11/cli', version: data.version, tarball: data.tarball, integrity: data.integrity, bundleSha256: data.bundleSha256 };
 }
-export async function registryCliRelease(version: string, request: ReleaseRequest = fetch): Promise<CliRelease> {
+export async function registryCliRelease(version: string, request: ReleaseRequest = fetch, expectedIdentity?: { releaseId: string; docsVersion: string; instructionsVersion: string }): Promise<CliRelease> {
   if (!stableVersion.test(version)) throw new Error('Invalid CLI version.');
   const response = await request(`${npmRegistry}/@o11%2fcli/${version}`, { redirect: 'error', signal: AbortSignal.timeout(5000) });
   if (!response.ok) throw new Error(`CLI release unavailable (registry HTTP ${response.status}).`);
   const data = record(JSON.parse(new TextDecoder().decode(await boundedBytes(response, 128 * 1024)))), dist = record(data.dist), release = record(data.o11Release);
   if (data.name !== '@o11/cli' || data.version !== version) throw new Error('Registry returned the wrong CLI release.');
+  if (expectedIdentity && Object.entries(expectedIdentity).some(([key, value]) => release[key] !== value)) throw new Error('CLI package and guide release identities disagree.');
   return parseCliRelease({ package: data.name, version, tarball: dist.tarball, integrity: dist.integrity, bundleSha256: release.bundleSha256 });
 }
 

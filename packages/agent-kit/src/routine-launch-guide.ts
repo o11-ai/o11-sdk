@@ -11,12 +11,12 @@ Start with \`o11_setup({routineId})\` for an existing routine. It returns the sa
 | Check the rule | engagement_routines_validateSignal, signals_previewEvents | Validate the saved definition and instruction at the current revision. Test matching and excluded cases separately; structural validation does not establish detection accuracy. |
 | Check the routine | engagement_routines_validate | Valid result for the current saved revision and intended environment. |
 | Inspect setup controls | engagement_routines_setupReview | Source import progress, retained history coverage and messaging availability for that revision. |
-| Enable session detection | engagement_routines_configureMonitoring | For session search or manual review, add the exact validated revision using sourceId and expectedVersion from research_monitoring. Preserve other selections and verify current setup state. |
+| Enable session detection | engagement_routines_configureMonitoring | For Monitor only, add the exact validated revision using sourceId and expectedVersion from research_monitoring. Preserve other selections and verify current setup state. |
 | Publish | engagement_routines_publish | New immutable version returned. Publishing does not activate it. |
 | Activate | engagement_routines_release | That version active in the intended environment. Activation can start outreach. |
 | Confirm and observe | engagement_routines_releases, engagement_runs_list, engagement_runs_inspect, engagement_inbox_list | Release state and actual matches/runs/delivery; a lack of matches is not proof of a broken campaign. |
 
-Session search and manual review finish setup through detection configuration. They do not require a published outreach version. Re-read \`o11_setup({routineId})\` after every change; check ingestion, worker readiness, selected revision and observed execution. Use research_evaluation to inspect recorded outcomes for labeled sessions at the exact current revision. Missing or outdated evidence is inconclusive.
+Monitor only finishes setup through detection configuration. They do not require a published outreach version. Re-read \`o11_setup({routineId})\` after every change; check ingestion, worker readiness, selected revision and observed execution. Use research_evaluation to inspect recorded outcomes for labeled sessions at the exact current revision. Missing or outdated evidence is inconclusive.
 
 The CLI supports o11 setup plan and o11 setup apply for resumable setup. Inspect its plan and blockers. Apply uses stable operation receipts and stops on failed prerequisites. It cannot repair unavailable server storage, grant itself permissions or resume imports that may trigger other routines.
 

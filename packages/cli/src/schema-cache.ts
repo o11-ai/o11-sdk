@@ -37,7 +37,7 @@ export async function cachedCommands(server: string, profile: string): Promise<s
   return [];
 }
 export function completionScript(shell: string, discovered: string[] = []) {
-  const local = 'login logout status setup check wait watch profiles commands docs routines personas surveys customers signals analytics research operations operation-id verify validate batch diagnostics install benchmark example'.split(' ');
+  const local = 'login logout status setup check wait watch profiles commands docs routines personas surveys customers signals analytics research operations operation-id verify validate batch diagnostics install benchmark example upgrade'.split(' ');
   const commands = [...new Set([...local, ...discovered.filter(command => /^[a-z][a-z0-9-]*( [a-z][a-z0-9-]*)*$/.test(command))])];
   if (shell === 'bash') {
     const next = new Map<string, Set<string>>();
