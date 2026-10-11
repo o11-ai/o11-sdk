@@ -1,28 +1,23 @@
 {
   "formatVersion": 1,
   "release": {
-    "id": "2026-10-10.1",
-    "preparedAt": "2026-10-10",
-    "cliVersion": "0.2.11",
-    "trackingVersion": "0.2.8",
-    "docsVersion": "1",
-    "instructionsVersion": "1",
+    "id": "2026-10-11.1",
+    "preparedAt": "2026-10-11",
+    "cliVersion": "0.2.12",
+    "trackingVersion": "0.2.9",
+    "docsVersion": "2",
+    "instructionsVersion": "2",
     "apiVersion": "1",
     "trackingFormatVersion": 1,
     "changes": [
-      "Prefer verified upgrades during setup, while preserving working customer changes.",
-      "Inspect installed packages separately from running application evidence.",
-      "Save version, upgrade, verification and temporary exception records.",
-      "Keep release notes and upgrade instructions available to people and agents.",
-      "Correct shared recording privacy guidance; retain existing consent and masking choices."
+      "Use request wording for signal progress labels, including missing-action conditions.",
+      "Describe older conditions with their event names, counts, filters and meaning criteria.",
+      "Clear stale progress labels when a condition changes in the dashboard."
     ],
     "upgrade": [
-      "Read the upgrades guide and inspect the existing app, source, environment and repository instructions.",
-      "Run o11 upgrade plan in each application. Use the verified server release, not an unverified latest tag.",
-      "Update the command tool and SDK with the permitted installation method when the change is straightforward.",
-      "Review custom changes, event meaning, capture privacy and every routine using shared tracking.",
-      "Keep pending events and receipts, stable IDs, existing sources, credentials and disabled settings.",
-      "Verify the deployed app, real processed activity, matching and excluded examples, then save the setup record."
+      "Read the live signals and upgrades guides and use the verified CLI and SDK release.",
+      "Preserve existing sources, credentials, event IDs, matching rules and capture settings.",
+      "Refresh Review to see labels for existing definitions; new setup saves request wording."
     ],
     "recovery": "Restore the previous dependency and app commit after checking service support. Keep pending delivery IDs. Sent messages, deleted history and newly collected data cannot be undone by reinstalling a package."
   },
@@ -42,9 +37,9 @@
       "trackingFormatVersion": 1
     },
     "setupRecords": {
-      "cliVersion": "0.2.11",
-      "instructionsVersion": "1",
-      "docsVersion": "1"
+      "cliVersion": "0.2.12",
+      "instructionsVersion": "2",
+      "docsVersion": "2"
     }
   },
   "limitations": [

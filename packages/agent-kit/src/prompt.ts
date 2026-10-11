@@ -1,5 +1,6 @@
 import { setupConnectionContext, setupConnectionCheck } from './setup-connection';
 import { setupDecisions } from './setup-decisions';
+import { setupExplanationGuidance } from './setup-explanation-guidance';
 import { agentKitVersion, cliVersion, docsVersion, instructionsVersion, releaseId } from './versions';
 import type { SetupRequest, SetupEvidence } from './setup-workflow-guide';
 export { setupConnectionContext, setupConnectionCheck, type SetupConnection } from './setup-connection';
@@ -37,8 +38,10 @@ Read o11 docs ${guide} --live --json (or fetch the Setup guide URL); then read o
 ${input.trackingOnly ? 'Do not ask delivery questions. Confirm only unresolved tracking semantics; continue independent work. Ask required questions once in ordinary chat at the end of the turn, without a question tool.' : setupDecisions}
 ${input.setupReport && !input.trackingOnly ? 'Saved setup evidence exists. Read the current report and live preflight; preserve completed work and resume unresolved dependencies rather than restarting.' : ''}
 Reuse existing o11 SDKs, events and successful-operation handlers; preserve existing analytics and source history. Add instrumentation only for confirmed gaps. Save explicit choices in the same draft, preserving the original request. Repair authorized local failures and run meaningful checks. Do not merge, deploy, activate, change remote databases or contact customers without authorization for that action.
-Verify separately: code checks, deployed capture, processed receipts and linked identity, matching and excluded cases, recipient permission, sender readiness, and the saved action. Guide a real matching and nonmatching application action when needed; no customer messages during setup. Empty previews cannot verify matching. Refresh live checks after repairs and read back saved settings. Each unresolved dependency needs a diagnosed cause (or the missing check), owner, exact action and retry path. Save tracking.status=waiting_for_evidence when configured capture or matching is unverified; waiting_for_code requires a confirmed code gap. Save a changed setup report once; avoid repeated report-only saves and revision churn.
-Finish with the operational outcome, tracking reused or changed, and the next action${input.trackingOnly ? '.' : ', plus a routine link labeled with the available action. For blockers, name the exact fix; for handoffs, name the prompt to copy and chat to paste into.'} If an answer is required, put the actual remaining questions at the end and end the turn there. Use plain Markdown, no HTML tags; keep diagnostics behind developer details.
+${input.trackingOnly ? '' : 'Use request wording for action labels.'}
+Verify code, deployed capture, processed receipts, linked identity, matches, exclusions, recipient permission, sender readiness and saved actions separately. Check real matches and exclusions without messaging. Empty previews cannot verify matching. Recheck repairs and read back saved settings. Name blockers' causes or missing checks, owners, actions and retry paths. Save tracking.status=waiting_for_evidence for unverified capture or matching; waiting_for_code requires a confirmed code gap. Save each changed report once.
+${setupExplanationGuidance}
+Report the outcome, tracking reused or changed, and next action${input.trackingOnly ? '.' : ', plus a routine link labeled with the available action. For blockers, name the exact fix; for handoffs, name the prompt to copy and chat to paste into.'} Put actual remaining questions at the end and end the turn there. Use plain Markdown, no HTML tags.
 
 ${input.trackingOnly ? 'Behavior to instrument:' : 'My exact routine request (preserve as the routine description):'}
 ${input.request}`;
@@ -68,5 +71,6 @@ ${setupConnectionCheck}
 
 Ask only genuinely missing questions in ordinary chat, without a question tool; put the actual unanswered questions at the end and end the turn there. If a CLI or SDK incompatibility prevents this repair, attempt a verified update and retry with the same profile before reporting a blocker. Preserve credentials and the newer working version.
 
+${setupExplanationGuidance}
 Finish with the cause, what you changed, the verification result, and any remaining action or retry time. Include the routine return link. Keep the user-facing answer short.`;
 }

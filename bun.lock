@@ -20,7 +20,7 @@
     },
     "packages/cli": {
       "name": "@o11/cli",
-      "version": "0.2.11",
+      "version": "0.2.12",
       "bin": {
         "o11": "./dist/index.js",
       },
@@ -38,7 +38,7 @@
     },
     "packages/tracking": {
       "name": "@o11/tracking",
-      "version": "0.2.8",
+      "version": "0.2.9",
       "dependencies": {
         "@rrweb/record": "2.1.6",
       },

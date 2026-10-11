@@ -2,6 +2,9 @@
 
 Use only the connected o11 MCP endpoint or CLI. o11 reads its configured sources on the server. A coding agent does not need a separate PostHog connection, provider login or analytics credential. Inspect each tool's current schema with o11 tools describe before calling it. If a required tool is unavailable, report the missing o11 capability or permission; do not switch to a provider connector.
 
+Use one short sentence per summary or limitation; give blockers one next action. Keep diagnostics under Details.
+For new o11 tracking without verified earlier history, say "Checks events o11 has received since setup." Claim earlier events only after verifying receipt or import.
+
 For new setup, investigate native o11 event receipts, coverage and recordings. PostHog import controls below apply only to existing PostHog routines and historical investigations; they are not prerequisites for new o11 capture. Missing historical o11 coverage cannot be reconstructed by installing tracking today.
 
 Start with o11_setup, organization_current, engagement_capabilities, signals_sources and analytics_status. Verify the workspace, source ID, environment, granted scopes and import progress. Reuse returned IDs. Query independent discovery calls together and retain their results for this investigation. Recheck state after configuration changes.

@@ -1,9 +1,13 @@
+import { setupExplanationGuidance } from './setup-explanation-guidance';
+
 export const historyDoc = {
   id: 'history', title: 'Verify historical behavior',
   description: 'Inspect past sessions and recordings through o11 without a separate provider connection.',
   markdown: `# Verify historical behavior
 
 Use only the connected o11 MCP endpoint or CLI. o11 reads its configured sources on the server. A coding agent does not need a separate PostHog connection, provider login or analytics credential. Inspect each tool's current schema with o11 tools describe before calling it. If a required tool is unavailable, report the missing o11 capability or permission; do not switch to a provider connector.
+
+${setupExplanationGuidance}
 
 For new setup, investigate native o11 event receipts, coverage and recordings. PostHog import controls below apply only to existing PostHog routines and historical investigations; they are not prerequisites for new o11 capture. Missing historical o11 coverage cannot be reconstructed by installing tracking today.
 

@@ -2,6 +2,22 @@
 
 These are prepared source records. A version is available only when the running service's /api/agent-docs/release verifies publication. Do not infer a deployment from a date, Git commit or registry latest tag.
 
+## 2026-10-11.1
+
+Command tool 0.2.12; tracking 0.2.9; instructions 2; guides 2; agent API 1; tracking format 1.
+
+- Use request wording for signal progress labels, including missing-action conditions.
+- Describe older conditions with their event names, counts, filters and meaning criteria.
+- Clear stale progress labels when a condition changes in the dashboard.
+
+Upgrade:
+
+1. Read the live signals and upgrades guides and use the verified CLI and SDK release.
+2. Preserve existing sources, credentials, event IDs, matching rules and capture settings.
+3. Refresh Review to see labels for existing definitions; new setup saves request wording.
+
+Recovery: Restore the previous dependency and app commit after checking service support. Keep pending delivery IDs. Sent messages, deleted history and newly collected data cannot be undone by reinstalling a package.
+
 ## 2026-10-10.1
 
 Command tool 0.2.11; tracking 0.2.8; instructions 1; guides 1; agent API 1; tracking format 1.

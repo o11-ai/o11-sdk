@@ -3,6 +3,20 @@ import { boundedBytes, npmRegistry, registryCliRelease, stableVersion, type Rele
 
 /** Append release records; never rewrite a released record to describe new behavior. */
 export const releaseHistory = [{
+  id: '2026-10-11.1', preparedAt: '2026-10-11', cliVersion: '0.2.12', trackingVersion: '0.2.9',
+  docsVersion: '2', instructionsVersion: '2', apiVersion: '1', trackingFormatVersion: 1,
+  changes: [
+    'Use request wording for signal progress labels, including missing-action conditions.',
+    'Describe older conditions with their event names, counts, filters and meaning criteria.',
+    'Clear stale progress labels when a condition changes in the dashboard.',
+  ],
+  upgrade: [
+    'Read the live signals and upgrades guides and use the verified CLI and SDK release.',
+    'Preserve existing sources, credentials, event IDs, matching rules and capture settings.',
+    'Refresh Review to see labels for existing definitions; new setup saves request wording.',
+  ],
+  recovery: 'Restore the previous dependency and app commit after checking service support. Keep pending delivery IDs. Sent messages, deleted history and newly collected data cannot be undone by reinstalling a package.',
+}, {
   id: '2026-10-10.1', preparedAt: '2026-10-10', cliVersion: '0.2.11', trackingVersion: '0.2.8',
   docsVersion: '1', instructionsVersion: '1', apiVersion: '1', trackingFormatVersion: 1,
   changes: [
