@@ -3,6 +3,19 @@ import { boundedBytes, npmRegistry, registryCliRelease, stableVersion, type Rele
 
 /** Append release records; never rewrite a released record to describe new behavior. */
 export const releaseHistory = [{
+  id: '2026-10-12.2', preparedAt: '2026-10-12', cliVersion: '0.2.14', trackingVersion: '0.2.11',
+  docsVersion: '4', instructionsVersion: '4', apiVersion: '1', trackingFormatVersion: 1,
+  changes: [
+    'Copy the tracking key, endpoint and environment together for server setup.',
+    'Use the configured tracking endpoint and validate the environment in setup examples.',
+  ],
+  upgrade: [
+    'Use the verified CLI and tracking release, then restart running CLI and MCP processes.',
+    'Keep existing keys and permissions; save the endpoint and environment alongside the key in server configuration.',
+    'Preserve event IDs, delivery receipts, capture settings and working application changes.',
+  ],
+  recovery: 'Restore the previous dependency and app commit after checking service support. Keep pending delivery IDs. Sent messages, deleted history and newly collected data cannot be undone by reinstalling a package.',
+}, {
   id: '2026-10-12.1', preparedAt: '2026-10-12', cliVersion: '0.2.13', trackingVersion: '0.2.10',
   docsVersion: '3', instructionsVersion: '3', apiVersion: '1', trackingFormatVersion: 1,
   changes: [

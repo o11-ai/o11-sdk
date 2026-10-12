@@ -10,7 +10,8 @@ Connection guide: https://your_api/api/agent-docs/cli
 CLI installation metadata: https://your_api/api/agent-docs/cli-install
 CLI profile: o11-WORKSPACE
 Tracking environment: test
-Release: 2026-10-12.1; instructions: 3; guides: 3
+Server environment: O11_TRACKING_ENDPOINT=https://your_api/api/tracking/events; O11_TRACKING_ENVIRONMENT=test. Reuse or create O11_TRACKING_KEY as described below, and keep it private. Pass these three values to createTrackingClient as endpoint, environment and key. The endpoint and environment are configuration; only the key is a secret. Profile sync uses that same key with the required profile scope, and browser replay receives short-lived session tokens from the authenticated server endpoint.
+Release: 2026-10-12.2; instructions: 4; guides: 4
 Release metadata: https://your_api/api/agent-docs/release
 
 Read the live upgrades and changelog guides. Run o11 upgrade plan for this application before dependency changes. Prefer a verified newer SDK when straightforward, even if the current SDK works. Preserve custom changes and shared tracking. For a difficult upgrade, retain working capture and save the reason, owner, next action and review date within 30 days through tracking save-setup-record; read tracking setup-record first and preserve its expectedRecordId. Follow the live record schema and verify installed and running versions separately. Never treat an unavailable update as a reason to reset capture, resume an intentionally paused source, or stop independent work.

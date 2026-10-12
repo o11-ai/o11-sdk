@@ -69,10 +69,14 @@ Create or reuse a source through Integrations → Application tracking or signal
 
 \`\`\`ts
 import { createTrackingClient } from '@o11/tracking';
+const environment = process.env.O11_TRACKING_ENVIRONMENT;
+if (environment !== 'test' && environment !== 'production') {
+  throw new Error('Set O11_TRACKING_ENVIRONMENT to test or production.');
+}
 const tracking = createTrackingClient({
-  endpoint: 'https://YOUR_O11_API/api/tracking/events',
+  endpoint: process.env.O11_TRACKING_ENDPOINT!,
   key: process.env.O11_TRACKING_KEY!,
-  environment: 'test', // production server uses its own key and environment
+  environment,
 });
 // After a real report creation commits; reuse this ID for retries.
 const receipt = await tracking.track({

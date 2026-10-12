@@ -21,6 +21,7 @@ Connection guide: ${server}/api/agent-docs/cli
 CLI installation metadata: ${server}/api/agent-docs/cli-install
 CLI profile: ${profile}
 Tracking environment: ${environment}
+Server environment: O11_TRACKING_ENDPOINT=${server}/api/tracking/events; O11_TRACKING_ENVIRONMENT=${environment}. Reuse or create O11_TRACKING_KEY as described below, and keep it private. Pass these three values to createTrackingClient as endpoint, environment and key. The endpoint and environment are configuration; only the key is a secret. Profile sync uses that same key with the required profile scope, and browser replay receives short-lived session tokens from the authenticated server endpoint.
 ${input.recordingsOnly ? "Requested work: recordings only; preserve existing event instrumentation.\n" : ""}${input.recordingSettings !== undefined ? `Saved recording setup (re-read live state before changes): ${JSON.stringify(recordingSetup)}\n` : ""}${input.returnUrl ? `Return to application settings: ${JSON.stringify(input.returnUrl)}\n` : ""}Release: ${releaseId}; instructions: ${instructionsVersion}; guides: ${docsVersion}
 Release metadata: ${server}/api/agent-docs/release
 

@@ -2,6 +2,21 @@
 
 These are prepared source records. A version is available only when the running service's /api/agent-docs/release verifies publication. Do not infer a deployment from a date, Git commit or registry latest tag.
 
+## 2026-10-12.2
+
+Command tool 0.2.14; tracking 0.2.11; instructions 4; guides 4; agent API 1; tracking format 1.
+
+- Copy the tracking key, endpoint and environment together for server setup.
+- Use the configured tracking endpoint and validate the environment in setup examples.
+
+Upgrade:
+
+1. Use the verified CLI and tracking release, then restart running CLI and MCP processes.
+2. Keep existing keys and permissions; save the endpoint and environment alongside the key in server configuration.
+3. Preserve event IDs, delivery receipts, capture settings and working application changes.
+
+Recovery: Restore the previous dependency and app commit after checking service support. Keep pending delivery IDs. Sent messages, deleted history and newly collected data cannot be undone by reinstalling a package.
+
 ## 2026-10-12.1
 
 Command tool 0.2.13; tracking 0.2.10; instructions 3; guides 3; agent API 1; tracking format 1.

@@ -1,6 +1,6 @@
 # Tracking SDK
 
-Inspect existing analytics SDKs, event handlers, wrappers and capture calls before installing anything. For new event routines, use existing o11 events; add replay only when needed, sharing existing PostHog recording through the o11 pipeline or using native capture otherwise. Leave PostHog configuration and delivery untouched. Preserve stored legacy data. Direct PostHog routines are disabled. If only PostHog records the action, verify the missing o11 delivery and add it at the existing handler while preserving other analytics. Express database changes as recorded successful operations; direct database signals are unavailable. Preserve existing event names, properties and delivery paths. Do not add duplicate o11 capture calls for the same action. An unavailable source or a partial catalog is an unresolved check, not proof that instrumentation is missing. For a confirmed gap, prepare the smallest draft PR or reviewable diff before proposing a production change. Install @o11/tracking@0.2.10 in the customer's JavaScript/TypeScript server application only when the chosen source needs it. The package exports createTrackingClient and advanceTrackingDelivery. Reuse the application's existing durable outbox. Persist advanceTrackingDelivery's returned state after each bounded step; it checks profile processing before events and validates receipt kinds. A receipt unconfirmed for 24 hours becomes receipt_review_required with its receipt retained for operator reconciliation. Never automatically resend a possibly processed operation. Clean up processed outbox rows after the application's retention period, preserving unresolved rows. Do not add first_prompt markers to implement a routine's once-per-person frequency. No o11 GitHub connection is needed.
+Inspect existing analytics SDKs, event handlers, wrappers and capture calls before installing anything. For new event routines, use existing o11 events; add replay only when needed, sharing existing PostHog recording through the o11 pipeline or using native capture otherwise. Leave PostHog configuration and delivery untouched. Preserve stored legacy data. Direct PostHog routines are disabled. If only PostHog records the action, verify the missing o11 delivery and add it at the existing handler while preserving other analytics. Express database changes as recorded successful operations; direct database signals are unavailable. Preserve existing event names, properties and delivery paths. Do not add duplicate o11 capture calls for the same action. An unavailable source or a partial catalog is an unresolved check, not proof that instrumentation is missing. For a confirmed gap, prepare the smallest draft PR or reviewable diff before proposing a production change. Install @o11/tracking@0.2.11 in the customer's JavaScript/TypeScript server application only when the chosen source needs it. The package exports createTrackingClient and advanceTrackingDelivery. Reuse the application's existing durable outbox. Persist advanceTrackingDelivery's returned state after each bounded step; it checks profile processing before events and validates receipt kinds. A receipt unconfirmed for 24 hours becomes receipt_review_required with its receipt retained for operator reconciliation. Never automatically resend a possibly processed operation. Clean up processed outbox rows after the application's retention period, preserving unresolved rows. Do not add first_prompt markers to implement a routine's once-per-person frequency. No o11 GitHub connection is needed.
 
 Use signals_tracking_register with a stable source ID, name and manifest. A manifest has version: 1 and events with name, description and fields. Each field has name, type (string, number or boolean) and required. Discover the exact schema through the tool catalog. Updates require expectedUpdatedAt from status. Registration preserves omitted events and rejects field removal, type/required changes or new required fields on an existing event. Add optional fields or use a new event name for a breaking change.
 
@@ -10,10 +10,14 @@ Create or reuse a source through Integrations → Application tracking or signal
 
 ```ts
 import { createTrackingClient } from '@o11/tracking';
+const environment = process.env.O11_TRACKING_ENVIRONMENT;
+if (environment !== 'test' && environment !== 'production') {
+  throw new Error('Set O11_TRACKING_ENVIRONMENT to test or production.');
+}
 const tracking = createTrackingClient({
-  endpoint: 'https://YOUR_O11_API/api/tracking/events',
+  endpoint: process.env.O11_TRACKING_ENDPOINT!,
   key: process.env.O11_TRACKING_KEY!,
-  environment: 'test', // production server uses its own key and environment
+  environment,
 });
 // After a real report creation commits; reuse this ID for retries.
 const receipt = await tracking.track({

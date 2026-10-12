@@ -1,0 +1,47 @@
+{
+  "formatVersion": 1,
+  "release": {
+    "id": "2026-10-12.2",
+    "preparedAt": "2026-10-12",
+    "cliVersion": "0.2.14",
+    "trackingVersion": "0.2.11",
+    "docsVersion": "4",
+    "instructionsVersion": "4",
+    "apiVersion": "1",
+    "trackingFormatVersion": 1,
+    "changes": [
+      "Copy the tracking key, endpoint and environment together for server setup.",
+      "Use the configured tracking endpoint and validate the environment in setup examples."
+    ],
+    "upgrade": [
+      "Use the verified CLI and tracking release, then restart running CLI and MCP processes.",
+      "Keep existing keys and permissions; save the endpoint and environment alongside the key in server configuration.",
+      "Preserve event IDs, delivery receipts, capture settings and working application changes."
+    ],
+    "recovery": "Restore the previous dependency and app commit after checking service support. Keep pending delivery IDs. Sent messages, deleted history and newly collected data cannot be undone by reinstalling a package."
+  },
+  "support": {
+    "preferred": "server_verified_release",
+    "previousReleaseNoticeDays": 180,
+    "sunset": [],
+    "exceptions": "Keep a working older installation temporarily with a reason, owner, next action and review date. Recheck within 30 days; a review date never stops capture automatically.",
+    "enforcement": "Advisory. No version-based rejection of existing tracking or automatic customer messaging changes.",
+    "scope": "Newer releases receive fixes. Older installations receive upgrade help; no indefinite promise to backport fixes. Retirement requires a published notice and at least 180 days, except a separately reviewed urgent security response."
+  },
+  "requirements": {
+    "events": {
+      "trackingFormatVersion": 1
+    },
+    "replay": {
+      "trackingFormatVersion": 1
+    },
+    "setupRecords": {
+      "cliVersion": "0.2.14",
+      "instructionsVersion": "4",
+      "docsVersion": "4"
+    }
+  },
+  "limitations": [
+    "Release requirements do not prove source access, deployment, history coverage, recording consent, worker health or contact permission."
+  ]
+}

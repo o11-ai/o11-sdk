@@ -6,12 +6,18 @@ JavaScript/TypeScript SDK with a dependency-free server entry for business event
 
 Create an application source in **Integrations → Application tracking**, copy its setup prompt into your coding agent, and register actual event schemas. Create a named key for **Local development**, select contact sync only when needed, and store the one-time secret in server configuration. Production uses a separate key and server secret. Neither key belongs in a browser bundle, public environment variable, prompt, log or source control.
 
+The key dialog copies all three server environment values: `O11_TRACKING_KEY`, `O11_TRACKING_ENDPOINT`, and `O11_TRACKING_ENVIRONMENT`. The endpoint and environment are configuration; the key is the only secret. Contact sync uses the same key with profile permission. Recordings use it on the server to create short-lived browser session tokens.
+
 ```ts
 import { createTrackingClient } from '@o11/tracking';
+const environment = process.env.O11_TRACKING_ENVIRONMENT;
+if (environment !== 'test' && environment !== 'production') {
+  throw new Error('Set O11_TRACKING_ENVIRONMENT to test or production.');
+}
 const tracking = createTrackingClient({
-  endpoint: 'https://api-v2.o11.ai/api/tracking/events',
+  endpoint: process.env.O11_TRACKING_ENDPOINT!,
   key: process.env.O11_TRACKING_KEY!,
-  environment: 'test', // use 'production' only for the deployed production server
+  environment,
 });
 const delivery = await tracking.track({
   eventId: 'report.created:' + report.id,

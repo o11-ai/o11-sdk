@@ -1,23 +1,22 @@
 {
   "formatVersion": 1,
   "release": {
-    "id": "2026-10-12.1",
+    "id": "2026-10-12.2",
     "preparedAt": "2026-10-12",
-    "cliVersion": "0.2.13",
-    "trackingVersion": "0.2.10",
-    "docsVersion": "3",
-    "instructionsVersion": "3",
+    "cliVersion": "0.2.14",
+    "trackingVersion": "0.2.11",
+    "docsVersion": "4",
+    "instructionsVersion": "4",
     "apiVersion": "1",
     "trackingFormatVersion": 1,
     "changes": [
-      "Store CLI credentials in private local files, with user-bound encryption on Windows.",
-      "Publish the routine-authoring guide and preserve manual changes when applying routine documents.",
-      "Update inbox reply, delegation, source-access and setup guidance."
+      "Copy the tracking key, endpoint and environment together for server setup.",
+      "Use the configured tracking endpoint and validate the environment in setup examples."
     ],
     "upgrade": [
-      "Use the verified CLI release and restart running CLI and MCP processes after updating.",
-      "Sign in once for legacy keyring profiles; preserve their server and workspace pins.",
-      "Read the live routine-authoring and inbox-replies guides; preserve IDs, manual edits, capture settings and pending delivery receipts."
+      "Use the verified CLI and tracking release, then restart running CLI and MCP processes.",
+      "Keep existing keys and permissions; save the endpoint and environment alongside the key in server configuration.",
+      "Preserve event IDs, delivery receipts, capture settings and working application changes."
     ],
     "recovery": "Restore the previous dependency and app commit after checking service support. Keep pending delivery IDs. Sent messages, deleted history and newly collected data cannot be undone by reinstalling a package."
   },
@@ -37,9 +36,9 @@
       "trackingFormatVersion": 1
     },
     "setupRecords": {
-      "cliVersion": "0.2.13",
-      "instructionsVersion": "3",
-      "docsVersion": "3"
+      "cliVersion": "0.2.14",
+      "instructionsVersion": "4",
+      "docsVersion": "4"
     }
   },
   "limitations": [
