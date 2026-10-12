@@ -22,11 +22,11 @@ export function setupPrompt(input: SetupRequest): string {
     `Tracking endpoint: ${new URL('/api/tracking/events', server).href}`,
     input.routineId && !input.trackingOnly ? `Return to this routine: ${new URL(`/dashboard/signals?routine=${encodeURIComponent(input.routineId)}`, input.frontendUrl ?? input.apiUrl).href}` : '',
     `Setup guide: ${new URL(`/api/agent-docs/${guide}`, server).href}`,
-    `CLI profile: ${profile} (shared by all routines in this workspace)`,
+    `CLI profile: ${profile}${input.documentAuthoring ? '' : ' (shared by all routines in this workspace)'}`,
     `CLI version: ${cliVersion}; Tracking SDK version: ${agentKitVersion} (copied hints, not compatibility gates)`,
     `Release: ${releaseId}; instructions: ${instructionsVersion}; guides: ${docsVersion}`,
   ].filter(Boolean).join('\n');
-  return `${input.trackingOnly ? 'Configure only missing o11 tracking in this application repository. Do not create, edit or activate a routine.' : 'Configure my o11 routine and any confirmed missing tracking in this application repository.'}
+  return `${input.trackingOnly ? 'Configure only missing o11 tracking in this application repository. Do not create, edit or activate a routine.' : input.purpose === 'update' ? 'Update the existing o11 routine below from my edited instructions. Keep the same routine ID and preserve independent settings edits.' : 'Configure my o11 routine and any confirmed missing tracking in this application repository.'}
 
 ${context}
 
@@ -37,14 +37,15 @@ Use a verified @o11/cli executable; try updating with o11 update before giving u
 Read o11 docs ${guide} --live --json (or fetch the Setup guide URL); then read only the tracking, history, replay or delivery procedures needed. ${input.trackingOnly ? 'Inspect the selected source and current tracking configuration.' : 'Use o11 setup plan with the returned or saved routine ID for live preflight and saved choices.'} Inspect live --help and use --input FILE for nested configuration; do not reconstruct schemas from source when discovery works. If setup plan is unavailable, update and retry, then use verified status and routine checks to continue. A permission refusal or uncertain write cannot be bypassed by switching clients.
 ${input.trackingOnly ? 'Do not ask delivery questions. Confirm only unresolved tracking semantics; continue independent work. Ask required questions once in ordinary chat at the end of the turn, without a question tool.' : setupDecisions}
 ${input.setupReport && !input.trackingOnly ? 'Saved setup evidence exists. Read the current report and live preflight; preserve completed work and resume unresolved dependencies rather than restarting.' : ''}
-Reuse existing o11 SDKs, events and successful-operation handlers; preserve existing analytics and source history. Add instrumentation only for confirmed gaps. Save explicit choices in the same draft, preserving the original request. Repair authorized local failures and run meaningful checks. Do not merge, deploy, activate, change remote databases or contact customers without authorization for that action.
+Reuse existing o11 SDKs, events and successful-operation handlers; preserve analytics and source history. Add instrumentation only for confirmed gaps. Save explicit choices in the same draft, preserving the original request. Fix authorized local failures; run meaningful checks. Do not merge, deploy, activate, change remote databases or contact customers without authorization for that action.
 ${input.trackingOnly ? '' : 'Use request wording for action labels.'}
 Verify code, deployed capture, processed receipts, linked identity, matches, exclusions, recipient permission, sender readiness and saved actions separately. Check real matches and exclusions without messaging. Empty previews cannot verify matching. Recheck repairs and read back saved settings. Name blockers' causes or missing checks, owners, actions and retry paths. Save tracking.status=waiting_for_evidence for unverified capture or matching; waiting_for_code requires a confirmed code gap. Save each changed report once.
 ${setupExplanationGuidance}
 Report the outcome, tracking reused or changed, and next action${input.trackingOnly ? '.' : ', plus a routine link labeled with the available action. For blockers, name the exact fix; for handoffs, name the prompt to copy and chat to paste into.'} Put actual remaining questions at the end and end the turn there. Use plain Markdown, no HTML tags.
 
+${!input.trackingOnly ? input.documentAuthoring ? `Read o11 docs routine-authoring --live --json. Interpret the whole document yourself. Keep manual edits.\n` : 'Convert follow-ups yourself.\n' : ''}
 ${input.trackingOnly ? 'Behavior to instrument:' : 'My exact routine request (preserve as the routine description):'}
-${input.request}`;
+${input.request}${input.configuration && !input.trackingOnly ? `\n\nSaved configuration choices (keep these separate from the routine description):\n${JSON.stringify(input.configuration, null, 2)}\nRead the current routine before editing. ${input.documentAuthoring ? 'Compare the document to its appliedPrompt; change only edited intent and preserve unrelated manual settings.' : 'Preserve these explicit choices'} and existing message content, routes, knowledge permissions and handoffs. Ask only about missing choices. Monitor only must never add or enable customer outreach. Saving choices does not authorize activation or sending.` : ""}`;
 }
 
 /** A repair handoff must not inherit instructions to rebuild the entire routine. */

@@ -1,6 +1,6 @@
 {
   "name": "@o11/cli",
-  "version": "0.2.12",
+  "version": "0.2.13",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/o11-ai/o11-sdk.git",
@@ -37,7 +37,6 @@
   "dependencies": {
     "@modelcontextprotocol/client": "2.3.0",
     "@modelcontextprotocol/server": "2.3.0",
-    "@napi-rs/keyring": "2.1.0",
     "zod": "4.6.5"
   },
   "devDependencies": {

@@ -22,7 +22,9 @@ export function format(value: unknown): string {
   if (object(value) && value.command && value.inputSchema) return commandHelp(value);
   if (object(value) && typeof value.organizationId === 'string' && Array.isArray(value.scopes) && object(value.readiness)) {
     const workflow = object(value.workflow) ? value.workflow : undefined;
-    return [`Workspace: ${value.organizationId}`, `Permissions: ${value.scopes.join(', ')}`, '',
+    const authenticated = object(value.authentication) && value.authentication.status === 'authenticated';
+    const success = process.stdout.isTTY && process.env.NO_COLOR === undefined && process.env.TERM !== 'dumb' ? '\x1b[38;2;5;150;105m✓ Authenticated\x1b[0m' : '✓ Authenticated';
+    return [...(authenticated ? [success] : []), `Workspace: ${value.organizationId}`, `Permissions: ${value.scopes.join(', ')}`, '',
       ...Object.entries(value.readiness).map(([name, ready]) => `${name}: ${ready ? 'ready' : 'unavailable'}`),
       ...(workflow ? ['', `Workflow: ${cell(workflow.state ?? 'unknown')}`, `Revision: ${cell(workflow.revision)}`, `Checked: ${cell(workflow.checkedAt)}`,
         ...(Array.isArray(workflow.blockers) ? workflow.blockers.filter(object).map(item => `Blocked: ${cell(item.message)}${item.owner ? ` (${cell(item.owner)})` : ''}`) : []),
@@ -94,7 +96,7 @@ setup apply/resume use --journal FILE and --max-steps N (default 20).
 --expect-organization ID and --expect-environment test|production pin request context.
 Use --help --offline for previously cached command schemas. Cached permissions may be stale.
 --profile NAME separates credentials. --no-browser supports remote sign-in.
---credential-store file explicitly selects private files instead of the OS keyring.
-Complete a waiting remote login with o11 login --input FILE|-.
+--credential-store file uses the default private files (Windows uses user-bound encryption).
+For older servers, complete a waiting login with o11 login --input FILE|-.
 Writes need --operation-id UUID. Reuse it with identical input after checking status.
 Legacy tools list/describe and call TOOL are supported over the HTTP API.`;

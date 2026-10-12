@@ -8,42 +8,42 @@ Inspect the routine's evidence needs, existing SDK initialization, recording set
 
 | Application setup | Recording choice |
 | --- | --- |
-| No PostHog | Native o11 recording after consent and sampling. |
+| No PostHog | Native o11 recording after consent. |
 | PostHog analytics without replay | Keep its analytics and use native o11 replay. |
 | PostHog replay enabled | Share its recording with o11 instead of starting another recorder. |
 | Recording disabled, sampled out or blocked | Keep that condition explicit; do not silently start an independent recorder. |
 
 Native and PostHog-shared replay use the same authenticated o11 upload, storage, playback and reporting pipeline. Sharing is additive: Never disable or reconfigure a customer's PostHog recording as an incidental routine setup action. Do not call its init, set_config, startSessionRecording, stopSessionRecording, capture or flush methods from the o11 adapter. Preserve its consent, sampling, payloads, uploads, analytics, existing routines and historical evidence.
 
-Include replay in new SDK setup by default when the application has a browser client. Reuse an existing recorder and preserve an explicitly disabled recording setting. An event-only routine does not require an additional recorder. Consent, allowed origins, sampling and retention still require the application's approved settings.
+Include replay in new SDK setup by default when the application has a browser client. Reuse an existing recorder and preserve an explicitly disabled recording setting. An event-only routine does not require an additional recorder. Consent and allowed origins still require the application's approved settings. o11 records every eligible session and keeps recordings until explicitly deleted.
 
 ## Add recordings after events
 
-In Integrations → o11 SDK → your application → Recordings, select the environment and copy the recording setup prompt. The prompt from signals.tracking.setupPrompt with recordingsOnly: true adds or repairs the browser recorder and authenticated replay-session endpoint on the existing source. Reuse its working environment key, event handlers and durable delivery. Do not re-register the event manifest or instrument unrelated business events. Saved recording choices, including disabled recording, still apply.
+In Integrations → o11 SDK → Settings, select the application environment and copy the agent prompt. The same prompt from signals.tracking.setupPrompt inspects live state and adds or repairs only missing SDK setup, including the browser recorder and authenticated replay-session endpoint on the existing source. The legacy recordingsOnly: true input remains compatible with existing clients. Reuse its working environment key, event handlers and durable delivery. Do not re-register the event manifest or instrument unrelated business events. Saved recording choices, including disabled recording, still apply.
 
 ## Authenticated o11 setup
 
-Inspect signals_tracking_status, signals.tracking.replay.status and engagement_replay_readiness for the selected application/environment. Recording status returns detectedOrigins and lastRecordingAt. An enabled setting does not prove that browser code is deployed or recording data has arrived. Prepare authorized code and report the remaining action; verify a received recording and playback before claiming capture works.
+Inspect signals_tracking_status, signals.tracking.replay.status and engagement_replay_readiness for the selected application/environment. Recording status returns detectedOrigins, lastRecordingAt and readyRecording. readyRecording identifies stored replay with a snapshot and a prepared playback manifest; still check actual playback before reporting verification. An enabled setting does not prove that browser code is deployed or recording data has arrived. Prepare authorized code and report the remaining action; verify a received recording and playback before claiming capture works.
 
 Discover exact browser application origins from deployment configuration for the selected environment. Submit verified origins through signals.tracking.registerOrigins with organizationId, projectId, environment and origins; read the live schema first. This updates discovery metadata without re-registering events or allowing capture. Production discovery excludes localhost and preview/test domains. Do not substitute the o11 dashboard/API origin, unrelated applications or arbitrary request Origin headers. Detection stays within the workspace, application and environment. If deployment configuration cannot establish an origin, leave manual domain entry available and report the missing evidence.
 
-Recordings shows detected domains for human review. The authenticated replay-session call also records its server-verified origin as a suggestion, even when capture is disabled. Detected domains never enable recording or change saved allowed origins. Humans review and save allowed origins, sampling and retention in Recordings; preserve existing saved settings and opt-outs.
+Application settings shows detected domains for human review. The authenticated replay-session call also records its server-verified origin as a suggestion, even when capture is disabled. Detected domains never enable recording or change saved allowed origins. Humans review and save allowed origins in App settings; preserve recording opt-outs and domain restrictions.
 
 Create a same-origin authenticated application endpoint that derives customerId from the signed-in account and verifies the requesting origin. Rate-limit it. Call `tracking.replaySession({ customerId, origin })` on the server and return its result with Cache-Control: no-store. Keep the application tracking key in the server secret store. Never accept an arbitrary browser customerId or return the server key. The resulting token is limited to one recording, environment and origin for 30 minutes.
 
-Import createReplayClient from @o11/tracking/replay. Provide endpoint ending in /api/replay, a consent callback and a session callback that fetches the authenticated endpoint with same-origin credentials. Start after consent; stop on normal session end; reset on identity changes. Call revokeConsent immediately on withdrawal and retry unconfirmed deletion. Reset is not deletion. New recording setup defaults to enabled, with 10% sampling and 30-day retention. Capture requires saved allowed origins, recording storage and browser consent. Preserve existing saved settings, including an explicit disabled choice.
+Import createReplayClient from @o11/tracking/replay. Provide endpoint ending in /api/replay, a consent callback and a session callback that fetches the authenticated endpoint with same-origin credentials. Start after consent; stop on normal session end; reset on identity changes. Call revokeConsent immediately on withdrawal and retry unconfirmed deletion. Reset is not deletion. New recording setup defaults to enabled, recording all eligible consented sessions (sampleRate: 100) until explicitly deleted (retentionDays: null). Older o11 sampling and expiry settings no longer limit capture or playback. Capture requires saved allowed origins, recording storage and browser consent. Preserve existing saved settings, including an explicit disabled choice.
 
-Inputs and text are masked by default. Canvas, media and iframes are blocked; console and network bodies are not collected. Add blockSelector for sensitive regions. approvedTextSelector permits only explicitly reviewed static text, never arbitrary customer content. Preserve consent, masking, origin restrictions and sampling.
+Inputs and text are masked by default. Canvas, media and iframes are blocked; console and network bodies are not collected. Add blockSelector for sensitive regions. approvedTextSelector permits only explicitly reviewed static text, never arbitrary customer content. Preserve consent, masking and origin restrictions.
 
 Link event sessionId to the o11 recordingId only after the server verifies that the recording belongs to its authenticated customer and application. Long visits rotate recordings before token expiry, so use the current recording ID. Browser observations do not prove committed server operations. Missing chunks, dropped navigation uploads and masked content remain explicit evidence limits.
 
-Use one o11 client per application capture lifecycle, lazy-load after consent/sampling and reuse existing server handlers and durable event delivery. Confirm received uploads, playback and verified customer/session links before reporting readiness. Installation or a local test alone does not prove production deployment.
+Use one o11 client per application capture lifecycle, lazy-load after consent and reuse existing server handlers and durable event delivery. Confirm received uploads, playback and verified customer/session links before reporting readiness. Installation or a local test alone does not prove production deployment.
 
 ## PostHog sharing
 
 <img src="/integrations/posthog.svg" alt="PostHog" width="88" height="48" style={{ backgroundColor: "white", padding: "8px", borderRadius: "6px" }} />
 
-Pass the actual PostHog instance as the optional `posthog` argument to createReplayClient. The adapter subscribes only to the public eventCaptured callback. It copies $snapshot batches, decodes supported compressed rrweb events and masks the copy in the browser before o11 uploads. It does not forward arbitrary PostHog analytics events. No PostHog OAuth or private API access is required. The authenticated session endpoint, o11 consent, allowed origins, sampling and retention above still apply.
+Pass the actual PostHog instance as the optional `posthog` argument to createReplayClient. The adapter subscribes only to the public eventCaptured callback. It copies $snapshot batches, decodes supported compressed rrweb events and masks the copy in the browser before o11 uploads. It does not forward arbitrary PostHog analytics events. No PostHog OAuth or private API access is required. The authenticated session endpoint, o11 consent and allowed origins above still apply.
 
 `const replay = createReplayClient({ endpoint, session, consent, posthog });`
 

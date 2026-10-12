@@ -2,13 +2,13 @@
 
 The user's original request remains saved. Dashboard validation uses Gemini with Mastra discovery tools to produce a supported definition. Your coding agent and the sidebar edit that definition directly through the same tools. Neither asks a second agent to configure it. Call signals_check, then engagement_routines_validate, publish, and explicitly activate the published version. Publishing alone does not run anything.
 
-Ongoing routines use o11 events and native o11 replay. PostHog is a bounded getting-started preview for active unpaid trials with no past paid usage. Imported evidence cannot activate live routines.
+Routines use o11 events and the o11 replay pipeline. Direct PostHog connections, imports and routines are disabled. Preserve stored data and definitions; replace unsupported sources with a new o11 routine.
 
 Set each event condition's label from the user's wording for that action, including absence conditions. Describe only that condition and its qualifiers; omit Then/And and later actions. Keep event names, filters and counts in the executable fields. Review displays these saved labels. Update labels whenever the request or conditions change. Definitions without labels display their event names, counts and filters.
 
 ## Recorded actions
 
-New SDK receipts and synced PostHog events wake only routines subscribed to those event names. Checks read the selected user's relevant events after activation, within the configured window. Simple rules use zero model calls. A sequence requires increasing event times, allows unrelated actions between steps, and never reuses one event for two actions. Equal timestamps cannot prove order.
+New SDK receipts wake only routines subscribed to those event names. Checks read the selected user's relevant events after activation, within the configured window. Simple rules use zero model calls. A sequence requires increasing event times, allows unrelated actions between steps, and never reuses one event for two actions. Equal timestamps cannot prove order.
 
 - “Pricing → Export → Home in one session”: kind events, scope session, operator sequence, three filtered steps.
 - “Created a report on Monday, exported it in a different session by Sunday”: scope customer, windowSeconds 604800. Session IDs may differ; customer identity must be verified.

@@ -14,6 +14,7 @@ import { render, help } from './format';
 import { version } from './version';
 import { availableUpdate, bundleSha256, installUpdate } from './update';
 import { healthIssues } from './health';
+import { authenticatedResult } from './auth-result';
 import { waitFor } from './wait';
 import { applySetup, setupPlan } from './setup';
 import { cachedDiscovery, saveDiscovery, completionScript, cachedCommands } from './schema-cache';
@@ -132,7 +133,7 @@ export async function run(argv: string[]) {
   if (command === 'batch') { await emit(async () => { const target = JSON.stringify({ server: server.href, profile }); const key = createHash('sha256').update(target + JSON.stringify(input)).digest('hex'); const result = await runBatch(input, api, { journal: values.journal ?? join(configRoot(), 'batches', `${key}.json`), target }); if (result.failed) process.exitCode = 2; return result; }); return; }
   const statusInput = () => { for (const key of Object.keys(input)) if (!['organizationId', 'routineId', 'environment'].includes(key)) throw new Error(`Unsupported setup field: ${key}.`); return input; };
   if (command === 'diagnostics') { await emit(async () => diagnosticBundle(await api.request('status', statusInput()))); return; }
-  if (command === 'status' || command === 'check') { await emit(async () => api.request('status', Object.keys(statusInput()).length ? input : undefined), command === 'check' || values.check); if (command === 'status' && process.stderr.isTTY && !json) { try { const release = await availableUpdate(server); if (release.updateAvailable) process.stderr.write(`CLI ${release.version} is available. Run o11 update --check.\n`); } catch { /* Update discovery never blocks workspace access. */ } } return; }
+  if (command === 'status' || command === 'check') { await emit(async () => authenticatedResult(await api.request('status', Object.keys(statusInput()).length ? input : undefined), profile, token ? 'service-token' : mode), command === 'check' || values.check); if (command === 'status' && process.stderr.isTTY && !json) { try { const release = await availableUpdate(server); if (release.updateAvailable) process.stderr.write(`CLI ${release.version} is available. Run o11 update --check.\n`); } catch { /* Update discovery never blocks workspace access. */ } } return; }
   if (command === 'setup') {
     const context = statusInput();
     await emit(async () => {

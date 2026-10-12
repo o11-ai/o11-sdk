@@ -1,23 +1,23 @@
 {
   "formatVersion": 1,
   "release": {
-    "id": "2026-10-11.1",
-    "preparedAt": "2026-10-11",
-    "cliVersion": "0.2.12",
-    "trackingVersion": "0.2.9",
-    "docsVersion": "2",
-    "instructionsVersion": "2",
+    "id": "2026-10-12.1",
+    "preparedAt": "2026-10-12",
+    "cliVersion": "0.2.13",
+    "trackingVersion": "0.2.10",
+    "docsVersion": "3",
+    "instructionsVersion": "3",
     "apiVersion": "1",
     "trackingFormatVersion": 1,
     "changes": [
-      "Use request wording for signal progress labels, including missing-action conditions.",
-      "Describe older conditions with their event names, counts, filters and meaning criteria.",
-      "Clear stale progress labels when a condition changes in the dashboard."
+      "Store CLI credentials in private local files, with user-bound encryption on Windows.",
+      "Publish the routine-authoring guide and preserve manual changes when applying routine documents.",
+      "Update inbox reply, delegation, source-access and setup guidance."
     ],
     "upgrade": [
-      "Read the live signals and upgrades guides and use the verified CLI and SDK release.",
-      "Preserve existing sources, credentials, event IDs, matching rules and capture settings.",
-      "Refresh Review to see labels for existing definitions; new setup saves request wording."
+      "Use the verified CLI release and restart running CLI and MCP processes after updating.",
+      "Sign in once for legacy keyring profiles; preserve their server and workspace pins.",
+      "Read the live routine-authoring and inbox-replies guides; preserve IDs, manual edits, capture settings and pending delivery receipts."
     ],
     "recovery": "Restore the previous dependency and app commit after checking service support. Keep pending delivery IDs. Sent messages, deleted history and newly collected data cannot be undone by reinstalling a package."
   },
@@ -37,9 +37,9 @@
       "trackingFormatVersion": 1
     },
     "setupRecords": {
-      "cliVersion": "0.2.12",
-      "instructionsVersion": "2",
-      "docsVersion": "2"
+      "cliVersion": "0.2.13",
+      "instructionsVersion": "3",
+      "docsVersion": "3"
     }
   },
   "limitations": [

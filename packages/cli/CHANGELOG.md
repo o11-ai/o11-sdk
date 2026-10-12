@@ -2,6 +2,22 @@
 
 These are prepared source records. A version is available only when the running service's /api/agent-docs/release verifies publication. Do not infer a deployment from a date, Git commit or registry latest tag.
 
+## 2026-10-12.1
+
+Command tool 0.2.13; tracking 0.2.10; instructions 3; guides 3; agent API 1; tracking format 1.
+
+- Store CLI credentials in private local files, with user-bound encryption on Windows.
+- Publish the routine-authoring guide and preserve manual changes when applying routine documents.
+- Update inbox reply, delegation, source-access and setup guidance.
+
+Upgrade:
+
+1. Use the verified CLI release and restart running CLI and MCP processes after updating.
+2. Sign in once for legacy keyring profiles; preserve their server and workspace pins.
+3. Read the live routine-authoring and inbox-replies guides; preserve IDs, manual edits, capture settings and pending delivery receipts.
+
+Recovery: Restore the previous dependency and app commit after checking service support. Keep pending delivery IDs. Sent messages, deleted history and newly collected data cannot be undone by reinstalling a package.
+
 ## 2026-10-11.1
 
 Command tool 0.2.12; tracking 0.2.9; instructions 2; guides 2; agent API 1; tracking format 1.

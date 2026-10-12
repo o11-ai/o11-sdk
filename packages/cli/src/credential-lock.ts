@@ -48,7 +48,13 @@ async function withDirectoryLock<T>(directory: string, path: string, action: () 
       let acquired = false;
       try { await rename(prepared, path); acquired = true; }
       catch (error) {
-        if (!code(error, 'EEXIST') && !code(error, 'ENOTEMPTY')) throw error;
+        if (!code(error, 'EEXIST') && !code(error, 'ENOTEMPTY')) {
+          // Windows MoveFileEx reports an existing directory as EPERM. Only
+          // treat that as contention after checking the destination itself.
+          if (process.platform !== 'win32' || !code(error, 'EPERM')) throw error;
+          try { await privateDirectory(path); }
+          catch (inspectionError) { if (!code(inspectionError, 'ENOENT')) throw inspectionError; }
+        }
       }
       if (acquired) {
         try { return await action(); }

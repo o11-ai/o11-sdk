@@ -3,6 +3,20 @@ import { boundedBytes, npmRegistry, registryCliRelease, stableVersion, type Rele
 
 /** Append release records; never rewrite a released record to describe new behavior. */
 export const releaseHistory = [{
+  id: '2026-10-12.1', preparedAt: '2026-10-12', cliVersion: '0.2.13', trackingVersion: '0.2.10',
+  docsVersion: '3', instructionsVersion: '3', apiVersion: '1', trackingFormatVersion: 1,
+  changes: [
+    'Store CLI credentials in private local files, with user-bound encryption on Windows.',
+    'Publish the routine-authoring guide and preserve manual changes when applying routine documents.',
+    'Update inbox reply, delegation, source-access and setup guidance.',
+  ],
+  upgrade: [
+    'Use the verified CLI release and restart running CLI and MCP processes after updating.',
+    'Sign in once for legacy keyring profiles; preserve their server and workspace pins.',
+    'Read the live routine-authoring and inbox-replies guides; preserve IDs, manual edits, capture settings and pending delivery receipts.',
+  ],
+  recovery: 'Restore the previous dependency and app commit after checking service support. Keep pending delivery IDs. Sent messages, deleted history and newly collected data cannot be undone by reinstalling a package.',
+}, {
   id: '2026-10-11.1', preparedAt: '2026-10-11', cliVersion: '0.2.12', trackingVersion: '0.2.9',
   docsVersion: '2', instructionsVersion: '2', apiVersion: '1', trackingFormatVersion: 1,
   changes: [

@@ -26,7 +26,7 @@ export async function profilesCommand(action: string | undefined, name: string |
     return { profile, pins: await profilePins(profile) };
   }
   if (action && !['list', 'inspect'].includes(action)) throw new Error('Use profiles list, inspect, select NAME, or pin.');
-  const describe = (key: string, item: Record<string, unknown>) => ({ name: key, selected: key === current.selected, server: item.server, credentialStore: item.credentialStore ?? 'keyring', pins: current.pins[key] ?? {} });
+  const describe = (key: string, item: Record<string, unknown>) => ({ name: key, selected: key === current.selected, server: item.server, credentialStore: 'file', ...(item.credentialStore !== 'file' ? { legacyKeyring: true, recovery: 'Run o11 login once to save a new login without accessing the old keyring.' } : {}), pins: current.pins[key] ?? {} });
   if (action === 'inspect') {
     const item = saved[profile];
     return { ...(object(item) ? describe(profile, item) : { name: profile, saved: false }), overrides: { server: process.env.O11_SERVER ?? null, profile: process.env.O11_PROFILE ?? null, serviceToken: !!(process.env.O11_TOKEN || process.env.O11_TOKEN_FILE) } };

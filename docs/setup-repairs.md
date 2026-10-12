@@ -67,7 +67,7 @@ contact-confirmation.json contains organizationId, environment, customerId, cont
 ## Imports and automatic messaging
 
 ```sh
-o11 analytics status --organization-id WORKSPACE --environment production --connector-id posthog --json
+o11 analytics status --organization-id WORKSPACE --environment production --connector-id o11 --json
 o11 analytics control --input resume-import.json --json
 o11 analytics continue-import --input continue-import.json --json
 o11 routines refresh-setup --input recheck.json --json

@@ -1,0 +1,58 @@
+# SDK release notes
+
+These are prepared source records. A version is available only when the running service's /api/agent-docs/release verifies publication. Do not infer a deployment from a date, Git commit or registry latest tag.
+
+## 2026-10-12.1
+
+Command tool 0.2.13; tracking 0.2.10; instructions 3; guides 3; agent API 1; tracking format 1.
+
+- Store CLI credentials in private local files, with user-bound encryption on Windows.
+- Publish the routine-authoring guide and preserve manual changes when applying routine documents.
+- Update inbox reply, delegation, source-access and setup guidance.
+
+Upgrade:
+
+1. Use the verified CLI release and restart running CLI and MCP processes after updating.
+2. Sign in once for legacy keyring profiles; preserve their server and workspace pins.
+3. Read the live routine-authoring and inbox-replies guides; preserve IDs, manual edits, capture settings and pending delivery receipts.
+
+Recovery: Restore the previous dependency and app commit after checking service support. Keep pending delivery IDs. Sent messages, deleted history and newly collected data cannot be undone by reinstalling a package.
+
+## 2026-10-11.1
+
+Command tool 0.2.12; tracking 0.2.9; instructions 2; guides 2; agent API 1; tracking format 1.
+
+- Use request wording for signal progress labels, including missing-action conditions.
+- Describe older conditions with their event names, counts, filters and meaning criteria.
+- Clear stale progress labels when a condition changes in the dashboard.
+
+Upgrade:
+
+1. Read the live signals and upgrades guides and use the verified CLI and SDK release.
+2. Preserve existing sources, credentials, event IDs, matching rules and capture settings.
+3. Refresh Review to see labels for existing definitions; new setup saves request wording.
+
+Recovery: Restore the previous dependency and app commit after checking service support. Keep pending delivery IDs. Sent messages, deleted history and newly collected data cannot be undone by reinstalling a package.
+
+## 2026-10-10.1
+
+Command tool 0.2.11; tracking 0.2.8; instructions 1; guides 1; agent API 1; tracking format 1.
+
+- Prefer verified upgrades during setup, while preserving working customer changes.
+- Inspect installed packages separately from running application evidence.
+- Save version, upgrade, verification and temporary exception records.
+- Keep release notes and upgrade instructions available to people and agents.
+- Correct shared recording privacy guidance; retain existing consent and masking choices.
+
+Upgrade:
+
+1. Read the upgrades guide and inspect the existing app, source, environment and repository instructions.
+2. Run o11 upgrade plan in each application. Use the verified server release, not an unverified latest tag.
+3. Update the command tool and SDK with the permitted installation method when the change is straightforward.
+4. Review custom changes, event meaning, capture privacy and every routine using shared tracking.
+5. Keep pending events and receipts, stable IDs, existing sources, credentials and disabled settings.
+6. Verify the deployed app, real processed activity, matching and excluded examples, then save the setup record.
+
+Recovery: Restore the previous dependency and app commit after checking service support. Keep pending delivery IDs. Sent messages, deleted history and newly collected data cannot be undone by reinstalling a package.
+
+Earlier releases predate this ledger. Inspect their bundled guides and actual installed behavior; do not assume they share current instructions. Read the upgrades guide for inspection, skipped releases, temporary exceptions and support policy.

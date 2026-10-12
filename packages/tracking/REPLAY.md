@@ -40,9 +40,9 @@ Server-only o11 business events remain separate and must follow committed operat
 
 The coding agent discovers exact browser origins from the selected environment's deployment configuration and submits them through `signals.tracking.registerOrigins` with `organizationId`, `projectId`, `environment` and `origins`. Read the live schema first. This stores domain suggestions independently of the event manifest. Production discovery excludes localhost and preview/test domains. Do not use the o11 dashboard/API origin, unrelated deployments or arbitrary request `Origin` headers. If the deployment configuration cannot establish the domain, manual entry remains available.
 
-Review detected domains in Recordings and save the allowed origins, sample percentage and retention. The authenticated `tracking.replaySession` call also records its server-verified origin as a suggestion, even when capture is disabled. Detection stays within the workspace, application and environment; it never enables recording or adds capture permission. New recording setup defaults to enabled, with 10% sampling and retention until deleted (`retentionDays: null`); saved keep periods remain in effect. Capture starts only after settings are saved, recording storage is available and browser consent is granted. Preserve existing saved settings, including disabled recording.
+Review detected domains in App settings and save the allowed origins. The authenticated `tracking.replaySession` call also records its server-verified origin as a suggestion, even when capture is disabled. Detection stays within the workspace, application and environment; it never enables recording or adds capture permission. New recording setup defaults to enabled. o11 records all eligible consented sessions (`sampleRate: 100`) and keeps recordings until deleted (`retentionDays: null`). Older o11 sampling and expiry settings no longer limit capture or playback. Capture starts only after settings are saved, recording storage is available and browser consent is granted. Preserve existing saved settings, including disabled recording.
 
-Recording status (`signals.tracking.replay.status`) includes `detectedOrigins` and `lastRecordingAt`. An enabled toggle confirms the saved setting. Verify a real consented session is received and playable in the selected environment before reporting that recording works. If there is no recording, check browser deployment, consent, sampling, allowed origins and storage; give the user the remaining action in Recordings or the running application.
+Recording status (`signals.tracking.replay.status`) includes `detectedOrigins` and `lastRecordingAt`. An enabled toggle confirms the saved setting. Verify a real consented session is received and playable in the selected environment before reporting that recording works. If there is no recording, check browser deployment, consent, allowed origins and storage; give the user the remaining action in App settings or the running application.
 
 Server example (inside your existing authenticated endpoint):
 
@@ -100,7 +100,7 @@ There is no browser disk spool. Bounded in-memory retries avoid persisting sensi
 
 ## Performance and transport
 
-- Server-only tracking imports never bundle rrweb. The browser bootstrap dynamically imports the recorder after consent/sampling.
+- Server-only tracking imports never bundle rrweb. The browser bootstrap dynamically imports the recorder after consent.
 - No pointer-move stream; scroll sampled at 150ms; input capture sampled at its last update; periodic full snapshot every five minutes.
 - Flush every five seconds, incremental chunks ≤256KB and events ≤240KB; full snapshots up to 1MB are uploaded whole in a dedicated chunk, in-memory buffer ≤2MB. Limits apply to UTF-8 payload bytes.
 - Gzip uploads above 8KB where CompressionStream is available. Receiver bounds compressed and expanded bodies independently at 1.024MB.
@@ -116,7 +116,7 @@ Revision manifests are immutable. Replay completeness requires durable contiguou
 
 Recovery uses the existing scheduled tracking worker (and local signals loop). Idle captures close interrupted after ten minutes without chunks, or token expiry. Dirty revisions retry, expired/deleted/merged customer recordings purge their full recording prefix in bounded pages, including originals/manifests/reports/indexes. A follow-up purge catches bounded in-flight report writes; the independent storage ledger also cleans up after organization deletion. Tombstones block late uploads and access before physical purge completes. Operators can retry the deletion API or scheduled work after storage failure; inspect `error_code`, `next_attempt_at`, capture/processed revisions.
 
-Changing retention applies to new recordings. Disabling an installation stops new uploads; it does not delete historical recordings. Re-enabling capture reconnects a paused/disconnected native source; application keys retain their own expiry/revocation checks. Native and PostHog capture are independently controlled; this SDK does not start/stop a customer's PostHog SDK. Explicit independent native capture alongside PostHog creates two recording streams; sharing avoids the second recorder.
+Native o11 recordings have no automatic expiry. Explicit recording, customer or workspace deletion still revokes access and purges storage. Disabling an installation stops new uploads; it does not delete historical recordings. Re-enabling capture reconnects a paused/disconnected native source; application keys retain their own expiry/revocation checks. Native and PostHog capture are independently controlled; this SDK does not start/stop a customer's PostHog SDK. Explicit independent native capture alongside PostHog creates two recording streams; sharing avoids the second recorder.
 
 ## Rollout verification
 

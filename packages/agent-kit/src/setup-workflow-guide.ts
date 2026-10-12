@@ -9,7 +9,7 @@ export type SetupEvidence = {
   blockers: ReadonlyArray<{ title?: string; kind?: string; summary?: string; message: string; owner?: string; nextStep?: string }>;
   limitations: ReadonlyArray<string>;
 };
-export type SetupRequest = SetupConnection & { apiUrl: string; frontendUrl?: string; organizationId: string; routineId?: string; revision?: number; request: string; trackingOnly?: boolean; trackingSourceId?: string; setupReport?: SetupEvidence };
+export type SetupRequest = SetupConnection & { apiUrl: string; frontendUrl?: string; organizationId: string; routineId?: string; revision?: number; purpose?: 'setup' | 'update'; documentAuthoring?: boolean; request: string; configuration?: Record<string, unknown>; trackingOnly?: boolean; trackingSourceId?: string; setupReport?: SetupEvidence };
 export function detailedSetupPrompt(input: SetupRequest): string {
   const endpoint = new URL('/api/mcp', input.apiUrl).href;
   const profile = `o11-${input.organizationId}`;
@@ -31,6 +31,7 @@ ${JSON.stringify(input.setupReport, null, 2)}
 
 For email setup, read the live channels guide and inspect sender capabilities and existing connections. Reuse a suitable ready mailbox. If owner consent is required, return the supported authorization link and verify the connection afterward. Browser approval does not activate a routine.
 
+${!input.trackingOnly ? "\nAuthor follow-ups without engagement.routines.flow. Compare agentPrompt to agentFlow.sourcePrompt; patch changes, keep manual edits and original prompt/document/mode. Save sourcePrompt as applied agentPrompt. Map stop conditions to real activity.\n" : ""}
 Keep this entire setup in this coding-agent chat. You own connection checks, source investigation, necessary questions, configuration, validation and saving the draft. Do not send me to the built-in o11 agent, Integrations, a terminal, or manual routine settings to complete work you can do through CLI/MCP.
 ${input.trackingOnly ? "Explain the tracking plan before changes. Confirm unresolved event semantics and inspect existing successful-operation handlers. Do not ask delivery questions or configure personas or routines in this tracking-only task. Keep names and outcomes in the user summary and technical IDs in diagnostics." : `${setupDecisions}
 ${setupConfigurationDecisions}`}

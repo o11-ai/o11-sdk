@@ -14,22 +14,9 @@ export interface SecretStore { read(): Promise<string | null>; write(value: stri
 export class LoginRequiredError extends Error {
   constructor() { super('Sign-in or additional consent is required. Run o11 login.'); }
 }
-export async function credentialStore(profile: string, server: URL, mode: CredentialMode = 'keyring'): Promise<SecretStore> {
-  if (mode === 'file') return { ...await fileStore(profile, server), exclusive: action => withCredentialLock(profile, server, mode, action) };
-  const unavailable = () => new Error('The OS keyring is unavailable. Unlock it and retry, or explicitly use --credential-store file for private local credential storage.');
-  let store: SecretStore;
-  try { store = await systemStore(profile, server); } catch { throw unavailable(); }
-  return {
-    exclusive: action => withCredentialLock(profile, server, mode, action),
-    read: async () => { try { return await store.read(); } catch { throw unavailable(); } },
-    write: async value => { try { await store.write(value); } catch { throw unavailable(); } },
-    clear: async () => { try { await store.clear(); } catch { throw unavailable(); } },
-  };
-}
-export async function systemStore(profile: string, server: URL): Promise<SecretStore> {
-  const { AsyncEntry } = await import('@napi-rs/keyring');
-  const entry = new AsyncEntry('o11-cli', `${profile}:${server.href}`, { linux: { store: 'secret-service' } });
-  return { read: async () => await entry.getPassword() ?? null, write: value => entry.setPassword(value), clear: async () => { await entry.deletePassword(); } };
+export async function credentialStore(profile: string, server: URL, mode: CredentialMode = 'file'): Promise<SecretStore> {
+  if (mode !== 'file') throw new Error('Keyring storage has been retired. Run o11 login with private-file storage.');
+  return { ...await fileStore(profile, server), exclusive: action => withCredentialLock(profile, server, mode, action) };
 }
 export class CliAuth implements OAuthClientProvider {
   private saved: Credentials = { clients: {} };

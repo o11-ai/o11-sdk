@@ -4,13 +4,14 @@ import { createHash, randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { configRoot, profileName } from './profile';
 import type { SecretStore } from './vault';
+import { windowsStore } from './windows-store';
 
 function missing(error: unknown): boolean {
   return error instanceof Error && 'code' in error && error.code === 'ENOENT';
 }
 export async function fileStore(profile: string, server: URL): Promise<SecretStore> {
   profileName.parse(profile);
-  if (process.platform === 'win32') throw new Error('File credentials require POSIX file permissions. Use the OS keyring on Windows.');
+  if (process.platform === 'win32') return windowsStore(profile, server);
   const directory = join(configRoot(), 'credentials');
   await mkdir(directory, { recursive: true, mode: 0o700 });
   const privateFile = (stat: Stats, directory = false) => {

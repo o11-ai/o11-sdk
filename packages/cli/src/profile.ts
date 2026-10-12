@@ -28,11 +28,13 @@ export async function loadServer(profile: string, override?: string) {
   return serverUrl(server);
 }
 export async function loadCredentialMode(profile: string, server: URL, override?: string): Promise<CredentialMode> {
-  if (override !== undefined) return credentialMode.parse(override);
-  const saved = (await profiles())[profileName.parse(profile)];
-  return saved?.server === server.href ? saved.credentialStore ?? 'keyring' : 'keyring';
+  profileName.parse(profile); serverUrl(server.href);
+  if (override !== undefined && credentialMode.parse(override) === 'keyring') throw new Error('Keyring storage has been retired. Run o11 login to save a new private-file login without accessing Keychain.');
+  // Legacy profiles retain their server and pins, but never access the old OS
+  // keyring. A fresh browser login creates credentials in the new store.
+  return 'file';
 }
-export async function saveServer(profile: string, server: URL, store: CredentialMode = 'keyring') {
+export async function saveServer(profile: string, server: URL, store: CredentialMode = 'file') {
   profileName.parse(profile); serverUrl(server.href); credentialMode.parse(store);
   await mkdir(configRoot(), { recursive: true, mode: 0o700 });
   await withProfileLock(async () => {
